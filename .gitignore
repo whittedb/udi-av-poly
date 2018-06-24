@@ -72,3 +72,4 @@ target/
 #Project specific
 polyinterface
 udi-pioneer-vsx1021-poly.iml
+venv/

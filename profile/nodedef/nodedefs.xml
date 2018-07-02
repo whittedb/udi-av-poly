@@ -1,31 +1,41 @@
 <nodeDefs>
     <!-- NODE DEF from 5.0 document http://wiki.universal-devices.com/index.php?title=V50_MAIN -->
     <!-- controller -->
-    <nodeDef id="controller" nls="ctl">
-        <editors />
+    <nodeDef id="avController" nls="ctl">
+        <editors/>
         <sts>
-			<st id="ST" editor="bool" />
-		</sts>
-        <cmds>
-            <sends />
-            <accepts>
-              <cmd id="DISCOVER" />
-              <cmd id="REMOVE_NOTICES_ALL" />
-              <cmd id="UPDATE_PROFILE" />
-            </accepts>
-        </cmds>
-    </nodeDef>
-	<!-- mynodetype -->
-    <nodeDef id="mynodetype" nls="mynode">
-        <editors />
-        <sts>
-            <st id="ST" editor="bool" />
+            <st id="ST" editor="bool"/>
+            <!-- Version Major -->
+            <st id="GV1" editor="FLOAT"/>
+            <!-- Version Minor -->
+            <st id="GV2" editor="FLOAT"/>
+            <!-- Device Count -->
+            <st id="GV3" editor="I_INTEGER"/>
+            <!-- shortpoll -->
+            <st id="GV4" editor="I_INTEGER"/>
+            <!-- longpoll -->
+            <st id="GV5" editor="I_INTEGER"/>
+            <!-- Debug (Log) Mode -->
+            <st id="GV6" editor="I_DM"/>
         </sts>
         <cmds>
-            <sends />
+            <sends>
+                <cmd id="DON"/>
+                <cmd id="DOF"/>
+            </sends>
             <accepts>
-                <cmd id="DON" />
-                <cmd id="DOF" />
+                <cmd id="SET_DM">
+                    <p id="" editor="I_DM" init="GV6"/>
+                </cmd>
+                <cmd id="SET_SHORTPOLL">
+                    <p id="" editor="I_INTEGER" init="GV4"/>
+                </cmd>
+                <cmd id="SET_LONGPOLL">
+                    <p id="" editor="I_INTEGER" init="GV5"/>
+                </cmd>
+                <cmd id="DISCOVER"/>
+                <cmd id="REMOVE_NOTICES_ALL"/>
+                <cmd id="UPDATE_PROFILE"/>
             </accepts>
         </cmds>
     </nodeDef>

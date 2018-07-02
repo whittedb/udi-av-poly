@@ -1,34 +1,16 @@
-#!/usr/bin/env python3
-"""
-This is a NodeServer template for Polyglot v2 written in Python2/3
-by Einstein.42 (James Milne) milne.james@gmail.com
-"""
+import logging
 import polyinterface
-import sys
-import time
-"""
-Import the polyglot interface module. This is in pypy so you can just install it
-normally. Replace pip with pip3 if you are using python3.
+from av_funcs import get_server_data
 
-Virtualenv:
-pip install polyinterface
-
-Not Virutalenv:
-pip install polyinterface --user
-
-*I recommend you ALWAYS develop your NodeServers in virtualenv to maintain
-cleanliness, however that isn't required. I do not condone installing pip
-modules globally. Use the --user flag, not sudo.
-"""
-
-LOGGER = polyinterface.LOGGER
 """
 polyinterface has a LOGGER that is created by default and logs to:
 logs/debug.log
 You can use LOGGER.info, LOGGER.warning, LOGGER.debug, LOGGER.error levels as needed.
 """
+LOGGER = polyinterface.LOGGER
 
-class Controller(polyinterface.Controller):
+
+class AVController(polyinterface.Controller):
     """
     The Controller Class is the primary node from an ISY perspective. It is a Superclass
     of polyinterface.Node so all methods from polyinterface.Node are available to this
@@ -62,7 +44,19 @@ class Controller(polyinterface.Controller):
         Super runs all the parent class necessities. You do NOT have
         to override the __init__ method, but if you do, you MUST call super.
         """
-        super(Controller, self).__init__(polyglot)
+        self.serverdata = get_server_data(LOGGER)
+        self.l_info("init", "Initializing A/V NodeServer version %s" % str(self.serverdata["version"]))
+        self.ready = False
+        self.hb = 0
+        self.debug_mode = 0
+        self.short_poll = 30
+        self.long_poll = 60
+        self.device_count = 0
+        self._device_nodes = []
+        super(AVController, self).__init__(polyglot)
+        self.name = "AV Controller"
+        self.address = "avcontroller"
+        self.primary = self.address
 
     def start(self):
         """
@@ -73,9 +67,9 @@ class Controller(polyinterface.Controller):
         this is where you should start. No need to Super this method, the parent
         version does nothing.
         """
-        LOGGER.info('Started MyNodeServer')
-        self.check_params()
-        self.discover()
+        self.l_info("init", "Starting A/V NodeServer version %s" % str(self.serverdata["version"]))
+        # self.check_params()
+        self.ready = True
 
     def shortPoll(self):
         """
@@ -91,9 +85,22 @@ class Controller(polyinterface.Controller):
         Optional.
         This runs every 30 seconds. You would probably update your nodes either here
         or shortPoll. No need to Super this method the parent version does nothing.
-        The timer can be overriden in the server.json.
+        The timer can be overridden in the server.json.
         """
-        pass
+        if not self.ready:
+            return
+        self.heartbeat()
+
+    def heartbeat(self):
+        self.l_debug("heartbeat", "hb={}".format(self.hb))
+        if self.hb is None or self.hb == 0:
+            self.reportCmd("DON", 2)
+            self.hb = 1
+        else:
+            self.reportCmd("DOF", 2)
+            self.hb = 0
+            self.l_info("heartbeat", "Deleting avController node")
+            self.delNode("avController")
 
     def query(self):
         """
@@ -102,6 +109,24 @@ class Controller(polyinterface.Controller):
         nodes back to ISY. If you override this method you will need to Super or
         issue a reportDrivers() to each node manually.
         """
+#        self.setDriver("ST", 1)
+        self.setDriver("GV3", len(self._device_nodes))
+        self.setDriver("GV1", self.serverdata["version_major"])
+        self.setDriver("GV2", self.serverdata["version_minor"])
+        self.set_debug_mode(self.getDriver("GV6"))
+        # Short Poll
+        v = self.getDriver("GV4")
+        if v is None or int(v) == 0:
+            v = 60
+        self.set_short_poll(v)
+
+        # Long Poll
+        v = self.getDriver("G5")
+        if v is None or int(v) == 0:
+            v = 300
+        self.set_long_poll(v)
+
+        self.discover()
         for node in self.nodes:
             self.nodes[node].reportDrivers()
 
@@ -109,60 +134,103 @@ class Controller(polyinterface.Controller):
         """
         Example
         Do discovery here. Does not have to be called discovery. Called from example
-        controller start method and from DISCOVER command recieved from ISY as an exmaple.
+        controller start method and from DISCOVER command received from ISY as an exmaple.
         """
-        self.addNode(MyNode(self, self.address, 'myaddress', 'My Node Name'))
+#        self.addNode(MyNode(self, self.address, 'myaddress', 'My Node Name'))
 
     def delete(self):
         """
         Example
         This is sent by Polyglot upon deletion of the NodeServer. If the process is
-        co-resident and controlled by Polyglot, it will be terminiated within 5 seconds
+        co-resident and controlled by Polyglot, it will be terminated within 5 seconds
         of receiving this message.
         """
-        LOGGER.info('Oh God I\'m being deleted. Nooooooooooooooooooooooooooooooooooooooooo.')
+        LOGGER.info("Oh God I\"m being deleted. Nooooooooooooooooooooooooooooooooooooooooo.")
 
     def stop(self):
-        LOGGER.debug('NodeServer stopped.')
+        LOGGER.debug("A/V NodeServer stopped.")
 
-    def check_params(self):
-        """
-        This is an example if using custom Params for user and password and an example with a Dictionary
-        """
-        default_user = "YourUserName"
-        default_password = "YourPassword"
-        if 'user' in self.polyConfig['customParams']:
-            self.user = self.polyConfig['customParams']['user']
-        else:
-            self.user = default_user
-            LOGGER.error('check_params: user not defined in customParams, please add it.  Using {}'.format(self.user))
-            st = False
-
-        if 'password' in self.polyConfig['customParams']:
-            self.password = self.polyConfig['customParams']['password']
-        else:
-            self.password = default_password
-            LOGGER.error('check_params: password not defined in customParams, please add it.  Using {}'.format(self.password))
-            st = False
-
-        # Make sure they are in the params
-        self.addCustomParam({'password': self.password, 'user': self.user, 'some_example': '{ "type": "TheType", "host": "host_or_IP", "port": "port_number" }'})
-
-        # Remove all existing notices
-        self.removeNoticesAll()
-        # Add a notice if they need to change the user/password from the default.
-        if self.user == default_user or self.password == default_password:
-            self.addNotice("Please set proper user and password in configuration page, and restart this nodeserver")
-
-    def remove_notices_all(self,command):
-        LOGGER.info('remove_notices_all:')
+    def remove_notices_all(self, command):
+        LOGGER.info("remove_notices_all:")
         # Remove all existing notices
         self.removeNoticesAll()
 
-    def update_profile(self,command):
-        LOGGER.info('update_profile:')
+    def update_profile(self, command):
+        LOGGER.info("update_profile:")
         st = self.poly.installprofile()
         return st
+
+    @classmethod
+    def set_all_logs(cls, level):
+        LOGGER.setLevel(level)
+        logging.getLogger("av_receiver").setLevel(level)
+#        logging.getLogger("requests").setLevel(level)
+#        logging.getLogger("urllib3").setLevel(level)
+
+    def l_info(self, name, string):
+        LOGGER.info("%s:%s: %s" % (self.id, name, string))
+
+    def l_error(self, name, string):
+        LOGGER.error("%s:%s: %s" % (self.id, name, string))
+
+    def l_warning(self, name, string):
+        LOGGER.warning("%s:%s: %s" % (self.id, name, string))
+
+    def l_debug(self, name, string):
+        LOGGER.debug("%s:%s: %s" % (self.id, name, string))
+
+    def set_debug_mode(self, level):
+        if level is None:
+            level = 0
+        else:
+            level = int(level)
+        self.debug_mode = level
+        self.setDriver("GV6", level)
+        # 0=All 10=Debug are the same because 0 (NOTSET) doesn't show everything.
+        if level == 0 or level == 10:
+            self.set_all_logs(logging.DEBUG)
+        elif level == 20:
+            self.set_all_logs(logging.INFO)
+        elif level == 30:
+            self.set_all_logs(logging.WARNING)
+        elif level == 40:
+            self.set_all_logs(logging.ERROR)
+        elif level == 50:
+            self.set_all_logs(logging.CRITICAL)
+        else:
+            self.l_error("set_debug_level", "Unknown level {0}".format(level))
+
+    def set_short_poll(self, val):
+        if val is None or int(val) < 5:
+            val = 5
+        self.short_poll = int(val)
+        self.setDriver("GV4", self.short_poll)
+        self.polyConfig["shortPoll"] = val
+
+    def set_long_poll(self, val):
+        if val is None or int(val) < 60:
+            val = 60
+        self.long_poll = int(val)
+        self.setDriver("GV5", self.long_poll)
+        self.polyConfig["longPoll"] = val
+
+    """
+    Command Functions
+    """
+    def cmd_set_debug_mode(self, command):
+        val = command.get("value")
+        self.l_info("cmd_set_debug_mode", val)
+        self.set_debug_mode(val)
+
+    def cmd_set_short_poll(self, command):
+        val = command.get("value")
+        self.l_info("cmd_set_short_poll", val)
+        self.set_short_poll(val)
+
+    def cmd_set_long_poll(self, command):
+        val = int(command.get("value"))
+        self.l_info("cmd_set_long_poll", val)
+        self.set_long_poll(val)
 
     """
     Optional.
@@ -172,14 +240,24 @@ class Controller(polyinterface.Controller):
     them. The ST and GV1 variables are for reporting status through Polyglot to ISY,
     DO NOT remove them. UOM 2 is boolean.
     """
-    id = 'controller'
+    id = "avController"
     commands = {
-        'DISCOVER': discover,
-        'UPDATE_PROFILE': update_profile,
-        'REMOVE_NOTICES_ALL': remove_notices_all
+        "SET_DM": cmd_set_debug_mode,
+        "SET_SHORTPOLL": cmd_set_short_poll,
+        "SET_LONGPOLL":  cmd_set_long_poll,
+        "DISCOVER": discover,
+        "UPDATE_PROFILE": update_profile,
+        "REMOVE_NOTICES_ALL": remove_notices_all
     }
-    drivers = [{'driver': 'ST', 'value': 0, 'uom': 2}]
-
+    drivers = [
+        {"driver": "ST", "value": 0, "uom": 2},
+        {"driver": "GV1", "value": 0, "uom": 56},   # vmaj: Version Major
+        {"driver": "GV2", "value": 0, "uom": 56},   # vmin: Version Minor
+        {"driver": "GV3", "value": 0, "uom": 56},   # device count
+        {"driver": "GV4", "value": 30, "uom": 56},  # shortpoll
+        {"driver": "GV5", "value": 60, "uom": 56},  # longpoll
+        {"driver": "GV6", "value": 0, "uom": 25}    # Debug (Log) Mode
+    ]
 
 
 class MyNode(polyinterface.Node):
@@ -223,7 +301,7 @@ class MyNode(polyinterface.Node):
         self.setDriver('ST', 1)
         pass
 
-    def setOn(self, command):
+    def set_on(self, command):
         """
         Example command received from ISY.
         Set DON on MyNode.
@@ -231,7 +309,7 @@ class MyNode(polyinterface.Node):
         """
         self.setDriver('ST', 1)
 
-    def setOff(self, command):
+    def set_off(self, command):
         """
         Example command received from ISY.
         Set DOF on MyNode
@@ -247,7 +325,6 @@ class MyNode(polyinterface.Node):
         """
         self.reportDrivers()
 
-
     drivers = [{'driver': 'ST', 'value': 0, 'uom': 2}]
     """
     Optional.
@@ -256,39 +333,16 @@ class MyNode(polyinterface.Node):
     of variable to display. Check the UOM's in the WSDK for a complete list.
     UOM 2 is boolean so the ISY will display 'True/False'
     """
-    id = 'mynodetype'
+    id = "mynodetype"
     """
     id of the node from the nodedefs.xml that is in the profile.zip. This tells
     the ISY what fields and commands this node has.
     """
     commands = {
-                    'DON': setOn, 'DOF': setOff
-                }
+        "DON": set_on,
+        "DOF": set_off
+    }
     """
     This is a dictionary of commands. If ISY sends a command to the NodeServer,
-    this tells it which method to call. DON calls setOn, etc.
+    this tells it which method to call. DON calls set_on, etc.
     """
-
-if __name__ == "__main__":
-    try:
-        polyglot = polyinterface.Interface('MyNodeServer')
-        """
-        Instantiates the Interface to Polyglot.
-        """
-        polyglot.start()
-        """
-        Starts MQTT and connects to Polyglot.
-        """
-        control = Controller(polyglot)
-        """
-        Creates the Controller Node and passes in the Interface
-        """
-        control.runForever()
-        """
-        Sits around and does nothing forever, keeping your program running.
-        """
-    except (KeyboardInterrupt, SystemExit):
-        sys.exit(0)
-        """
-        Catch SIGTERM or Control-C and exit cleanly.
-        """

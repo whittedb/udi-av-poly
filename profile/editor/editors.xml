@@ -3,4 +3,21 @@
     <editor id="bool">
         <range uom="2" subset="0,1" />
     </editor>
+
+    <editor id="I_DM">
+        <range uom="25" subset="0,10,20,30,40,50" nls="CDM" />
+    </editor>
+
+    <editor id="I_POWER">
+      <!-- Only tells us True or False? -->
+        <range uom="25" subset="0,1" nls="POWER" />
+    </editor>
+
+    <editor id="FLOAT">
+       <range uom="56" min="0.1" max="999.999"/>
+    </editor>
+
+    <editor id="I_INTEGER">
+      <range uom="56" min="0" max="4294967295" prec="0" />
+    </editor>
 </editors>

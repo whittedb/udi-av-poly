@@ -1,4 +1,4 @@
-# MyNodeServer
+# Pioneer VSX-1021 NodeServer
 
 #### Installation
 

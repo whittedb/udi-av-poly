@@ -1,21 +1,21 @@
 {
-    "name": "PythonTemplate",
-    "docs": "https://github.com/Einstein42/udi-poly-template-python",
+    "name": "A/V Server",
+    "docs": "",
     "type": "python",
-    "executable": "name-poly.py",
+    "executable": "udi-av-receiver-poly.py",
     "install": "install.sh",
-    "description": "My Node Server",
-    "notice": "Your disclaimer here",
+    "description": "Pioneer VSX-1021 Node Server",
+    "notice": "No disclaimer here",
     "shortPoll": "5",
     "longPoll": "60",
     "credits": [
         {
-            "title": "mypoly: a NodeServer for My Integration",
-            "author": "James Milne (Einstein.42)",
-            "version": "2.0.3",
-            "date": "November 8, 2017",
-            "source": "https://github.com/Einstein42/udi-poly-template-python",
-            "license": "https://raw.githubusercontent.com/Einstein42/udi-poly-template-python/master/LICENSE"
+            "title": "udi-av-receiver-poly: a NodeServer for the A/V Receivers",
+            "author": "Brad Whitted (whittedb)",
+            "version": "1.0.0",
+            "date": "June 28, 2018",
+            "source": "",
+            "license": ""
         }
     ]
 }

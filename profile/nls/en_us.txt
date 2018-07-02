@@ -1,10 +1,43 @@
 # controller
-ND-controller-NAME = My NodeServer Controller
-CMD-ctl-DISCOVER-NAME = Re-Discover
+ND-avController-NAME = AV Receiver Controller
+ND-avController-ICON = GenericRspCtl
+CMD-ctl-DISCOVER-NAME = Discover
 CMD-ctl-UPDATE_PROFILE-NAME = Update Profile
 CMD-ctl-REMOVE_NOTICES_ALL-NAME = Remove Notices
 ST-ctl-ST-NAME = NodeServer Online
+ST-ctl-GV1-NAME = Version Major
+ST-ctl-GV2-NAME = Version Minor
+ST-ctl-GV3-NAME = Device Count
+ST-ctl-GV4-NAME = Short Poll
+ST-ctl-GV5-NAME = Long Poll
+ST-ctl-GV6-NAME = Debug Mode
 
-# mynodetype
-ND-mynodetype-NAME = My Node
-ST-mynode-ST-NAME = Power
+CMD-ctl-SET_SHORTPOLL-NAME = Short Poll
+CMD-ctl-SET_LONGPOLL-NAME = Long Poll
+
+CMD-ctl-SET_DM-NAME = Debug
+CDM-0 = All
+CDM-10 = Debug
+CDM-20 = Info
+CDM-30 = Warning
+CDM-40 = Error
+CDM-50 = Critical
+
+# node type
+ND-vsx1021-NAME = VSX1021 Receiver
+ND-vsx1021-ICON = GenericRspCtl
+
+# defaults for all a/v receivers
+ST-ST-NAME = Status
+
+ST-GV1-NAME = Power
+POWER-0 = Off
+POWER-1 = On
+
+ST-GV2-NAME = Volume
+ST-GV3-NAME = Input Source
+
+ST-GV4-NAME = Mute
+MUTE-0 = Off
+MUTE-1 = On
+

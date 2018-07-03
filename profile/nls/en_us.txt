@@ -11,6 +11,10 @@ ST-ctl-GV3-NAME = Device Count
 ST-ctl-GV4-NAME = Short Poll
 ST-ctl-GV5-NAME = Long Poll
 ST-ctl-GV6-NAME = Debug Mode
+ST-ctl-GV7-NAME = Heartbeat
+
+HB-0 = -1
+HB-1 = 1
 
 CMD-ctl-SET_SHORTPOLL-NAME = Short Poll
 CMD-ctl-SET_LONGPOLL-NAME = Long Poll

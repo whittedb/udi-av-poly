@@ -5,6 +5,10 @@
         <editors/>
         <sts>
             <st id="ST" editor="bool"/>
+            <!-- Heartbeat -->
+            <st id="GV7" editor="I_HB"/>
+            <!-- Debug (Log) Mode -->
+            <st id="GV6" editor="I_DM"/>
             <!-- Version Major -->
             <st id="GV1" editor="FLOAT"/>
             <!-- Version Minor -->
@@ -15,8 +19,6 @@
             <st id="GV4" editor="I_INTEGER"/>
             <!-- longpoll -->
             <st id="GV5" editor="I_INTEGER"/>
-            <!-- Debug (Log) Mode -->
-            <st id="GV6" editor="I_DM"/>
         </sts>
         <cmds>
             <sends>

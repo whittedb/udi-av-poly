@@ -21,14 +21,10 @@ def get_server_data(logger):
     sv = version.split(".")
     v1 = 0
     v2 = 0
-    if len(sv) == 1:
+    if len(sv) > 0:
         v1 = int(sv[0])
-    elif len(sv) > 1:
-        v1 = float("%s.%s" % (sv[0], sv[1]))
-        if len(sv) == 3:
+        if len(sv) > 1:
             v2 = int(sv[2])
-        else:
-            v2 = float("%s.%s" % (sv[2], sv[3]))
     serverdata["version"] = version
     serverdata["version_major"] = v1
     serverdata["version_minor"] = v2

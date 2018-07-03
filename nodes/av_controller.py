@@ -9,6 +9,10 @@ You can use LOGGER.info, LOGGER.warning, LOGGER.debug, LOGGER.error levels as ne
 """
 LOGGER = polyinterface.LOGGER
 
+DEFAULT_SHORT_POLL = 10
+DEFAULT_LONG_POLL = 30
+DEFAULT_DEBUG_MODE = 0
+
 
 class AVController(polyinterface.Controller):
     """
@@ -38,6 +42,11 @@ class AVController(polyinterface.Controller):
                   this joins the underlying queue query thread and just waits for it to terminate
                   which never happens.
     """
+
+    SUPPORTED_DEVICES = [
+        "VSX1021"
+    ]
+
     def __init__(self, polyglot):
         """
         Optional.
@@ -48,15 +57,16 @@ class AVController(polyinterface.Controller):
         self.l_info("init", "Initializing A/V NodeServer version %s" % str(self.serverdata["version"]))
         self.ready = False
         self.hb = 0
-        self.debug_mode = 0
-        self.short_poll = 30
-        self.long_poll = 60
+        self.debug_mode = DEFAULT_DEBUG_MODE
+        self.short_poll = DEFAULT_SHORT_POLL
+        self.long_poll = DEFAULT_LONG_POLL
         self.device_count = 0
-        self._device_nodes = []
+        self._device_nodes = {}
         super(AVController, self).__init__(polyglot)
         self.name = "AV Controller"
         self.address = "avcontroller"
         self.primary = self.address
+        self.discover()
 
     def start(self):
         """
@@ -68,8 +78,79 @@ class AVController(polyinterface.Controller):
         version does nothing.
         """
         self.l_info("init", "Starting A/V NodeServer version %s" % str(self.serverdata["version"]))
-        # self.check_params()
-        self.ready = True
+        v = self.polyConfig["shortPoll"]
+        if v is None or v == 0:
+            self.polyConfig["shortPoll"] = self.short_poll
+        else:
+            self.short_poll = v
+
+        self.long_poll = self.polyConfig["longPoll"]
+        if v is None or v == 0:
+            self.polyConfig["longPoll"] = self.long_poll
+        else:
+            self.long_poll = v
+
+        self.load_params()
+        self.discover()
+
+    def load_params(self):
+        v = self.getCustomParam("debugMode")
+        if v is None:
+            self.addCustomParam({"debugMode": self.debug_mode})
+        else:
+            self.debug_mode = v
+
+        """
+        Load device info for node creation from customParams.  Requires several keys to define a device node, i.e:
+            VSX1021_0_HOST = 192.168.1.1
+            VSX1021_0_PORT = 23
+            VSX1021_1_HOST = 192.168.1.2
+            VSX1021_1_PORT = 23
+            ... up to 9
+        """
+
+        device_types = {}
+        for device_type in self.SUPPORTED_DEVICES:
+            devices = {}
+            for i in range(0, 9):
+                device = "{}_{}".format(device_type, i)
+                host = self.getCustomParam(device + "_HOST")
+                if host is None:
+                    continue
+
+                port = self.getCustomParam(device + "_PORT")
+                if port is None:
+                    self.l_error("load_params", device_type + "_PORT key missing: ignoring")
+                    continue
+
+                sv = host.split(".")
+                if len(sv) != 4:
+                    self.l_error("load_params", "Invalid host IP")
+                    continue
+
+                suffix = "_{}_{}_{}".format(i, sv[3], port)
+                prefix = device_type[0:14-len(suffix)]
+                address = prefix + suffix
+                device = {
+                    address: {
+                        "host": host,
+                        "port": port
+                    }
+                }
+
+                devices.update(device)
+                self.l_debug("load_params", "Node Added: {}, Address: {}, Host: {}, Port: {}"
+                             .format(device_type, address, device[address]["host"], device[address]["port"]))
+
+            device_types.update({device_type: devices})
+
+        self._device_nodes = device_types
+        self.l_info("load_params", "{} devices supported".format(len(self._device_nodes)))
+        for dt_k, dt_v in self._device_nodes.items():
+            self.l_info("load_params", dt_k)
+            for d_k, d_v in dt_v.items():
+                self.l_debug("load_params", "{}: Address: {}, Host: {}, Port: {}"
+                             .format(dt_k, d_k, d_v["host"], d_v["port"]))
 
     def shortPoll(self):
         """
@@ -78,7 +159,25 @@ class AVController(polyinterface.Controller):
         or longPoll. No need to Super this method the parent version does nothing.
         The timer can be overriden in the server.json.
         """
-        pass
+        if not self.ready:
+            # Debug mode
+            self.setDriver("GV6", self.debug_mode)
+
+            # Short Poll
+            v = self.getDriver("GV4")
+            if v is None or int(v) == 0:
+                v = self.polyConfig["shortPoll"]
+            self.set_short_poll(v)
+
+            # Long Poll
+            v = self.getDriver("G5")
+            if v is None or int(v) == 0:
+                v = self.polyConfig["longPoll"]
+            self.set_long_poll(v)
+
+            self.query()
+            self.ready = True
+            self.setDriver("ST", 1)
 
     def longPoll(self):
         """
@@ -87,8 +186,6 @@ class AVController(polyinterface.Controller):
         or shortPoll. No need to Super this method the parent version does nothing.
         The timer can be overridden in the server.json.
         """
-        if not self.ready:
-            return
         self.heartbeat()
 
     def heartbeat(self):
@@ -99,8 +196,7 @@ class AVController(polyinterface.Controller):
         else:
             self.reportCmd("DOF", 2)
             self.hb = 0
-            self.l_info("heartbeat", "Deleting avController node")
-            self.delNode("avController")
+        self.setDriver("GV7", self.hb)
 
     def query(self):
         """
@@ -109,24 +205,10 @@ class AVController(polyinterface.Controller):
         nodes back to ISY. If you override this method you will need to Super or
         issue a reportDrivers() to each node manually.
         """
-#        self.setDriver("ST", 1)
         self.setDriver("GV3", len(self._device_nodes))
         self.setDriver("GV1", self.serverdata["version_major"])
         self.setDriver("GV2", self.serverdata["version_minor"])
-        self.set_debug_mode(self.getDriver("GV6"))
-        # Short Poll
-        v = self.getDriver("GV4")
-        if v is None or int(v) == 0:
-            v = 60
-        self.set_short_poll(v)
 
-        # Long Poll
-        v = self.getDriver("G5")
-        if v is None or int(v) == 0:
-            v = 300
-        self.set_long_poll(v)
-
-        self.discover()
         for node in self.nodes:
             self.nodes[node].reportDrivers()
 
@@ -136,6 +218,12 @@ class AVController(polyinterface.Controller):
         Do discovery here. Does not have to be called discovery. Called from example
         controller start method and from DISCOVER command received from ISY as an exmaple.
         """
+        cnt = 0
+        for dt_v in self._device_nodes.values():
+            cnt += len(dt_v)
+
+        self.l_debug("discover", "Cnt = {}".format(cnt))
+        self.set_device_count(cnt)
 #        self.addNode(MyNode(self, self.address, 'myaddress', 'My Node Name'))
 
     def delete(self):
@@ -159,6 +247,10 @@ class AVController(polyinterface.Controller):
         LOGGER.info("update_profile:")
         st = self.poly.installprofile()
         return st
+
+    def set_device_count(self, count):
+        self.device_count = count
+        self.setDriver("GV3", self.device_count)
 
     @classmethod
     def set_all_logs(cls, level):
@@ -185,6 +277,7 @@ class AVController(polyinterface.Controller):
         else:
             level = int(level)
         self.debug_mode = level
+        self.addCustomParam({"debugMode": self.debug_mode})
         self.setDriver("GV6", level)
         # 0=All 10=Debug are the same because 0 (NOTSET) doesn't show everything.
         if level == 0 or level == 10:
@@ -201,18 +294,20 @@ class AVController(polyinterface.Controller):
             self.l_error("set_debug_level", "Unknown level {0}".format(level))
 
     def set_short_poll(self, val):
-        if val is None or int(val) < 5:
-            val = 5
+        if val is None or int(val) < 10:
+            val = 10
         self.short_poll = int(val)
         self.setDriver("GV4", self.short_poll)
-        self.polyConfig["shortPoll"] = val
+        self.polyConfig["shortPoll"] = self.short_poll
 
     def set_long_poll(self, val):
-        if val is None or int(val) < 60:
-            val = 60
+        if val is None:
+            val = 300
+        if int(val) > 300:
+            val = 300
         self.long_poll = int(val)
         self.setDriver("GV5", self.long_poll)
-        self.polyConfig["longPoll"] = val
+        self.polyConfig["longPoll"] = self.long_poll
 
     """
     Command Functions
@@ -254,9 +349,10 @@ class AVController(polyinterface.Controller):
         {"driver": "GV1", "value": 0, "uom": 56},   # vmaj: Version Major
         {"driver": "GV2", "value": 0, "uom": 56},   # vmin: Version Minor
         {"driver": "GV3", "value": 0, "uom": 56},   # device count
-        {"driver": "GV4", "value": 30, "uom": 56},  # shortpoll
-        {"driver": "GV5", "value": 60, "uom": 56},  # longpoll
-        {"driver": "GV6", "value": 0, "uom": 25}    # Debug (Log) Mode
+        {"driver": "GV4", "value": DEFAULT_SHORT_POLL, "uom": 56},  # shortpoll
+        {"driver": "GV5", "value": DEFAULT_LONG_POLL, "uom": 56},  # longpoll
+        {"driver": "GV7", "value": 0, "uom": 25},   # heartbeat
+        {"driver": "GV6", "value": DEFAULT_DEBUG_MODE, "uom": 25}    # Debug (Log) Mode
     ]
 
 

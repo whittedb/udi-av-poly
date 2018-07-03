@@ -27,7 +27,7 @@ class AVDevice(polyinterface.Node):
         query(): Called when ISY sends a query request to Polyglot for this specific node
     """
 
-    def __init__(self, controller, primary, address=None, name=None, uom=None, tdata=None, is_new=True):
+    def __init__(self, controller, primary, address=None, name=None):
         """
         Optional.
         Super runs all the parent class necessities. You do NOT have
@@ -44,7 +44,6 @@ class AVDevice(polyinterface.Node):
         self.address = address
         self.id = "avDevice"    # Until we figure out the uom
         self.name = name
-        self.is_new = is_new
         self.controller = controller
         self.primary_n = controller.nodes[primary]
 

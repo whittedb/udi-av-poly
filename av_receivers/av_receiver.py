@@ -32,14 +32,21 @@ class StateMachine(Machine):
             {"trigger": "read_error", "source": "running", "dest": "error"},
 
         ]
-        super().__init__(model=None, states=states, transitions=transitions, initial="not_running",
-                         send_event=True, queued=True, auto_transitions=False)
+        super().__init__(model=None, states=states, transitions=transitions,
+                         initial="not_running", send_event=True, queued=True, auto_transitions=False)
 
 
 class AvReceiver(object):
+    """
+    Trigger methods created by the state machine
+
+    start(): Connects to device and starts reading from it
+    close(): Stops reading from device and disconnects from it
+    shutdown(): Disconnects from device and enters a shutdown state.  There is no way to restart from here.
+    """
     _stateMachine = StateMachine()
 
-    def __init__(self, logger):
+    def __init__(self, name, logger):
         if logger:
             self.logger = logger
         else:
@@ -47,6 +54,7 @@ class AvReceiver(object):
         self._shutdownEvent = Event()
         self._startupComplete = Event()
         self._stateMachineLock = RLock()
+        self._name = name
         self._power = None
         self._volume = None
         self._mute = None
@@ -55,28 +63,39 @@ class AvReceiver(object):
         self._stateMachine.add_model(model=self, model_context=self._stateMachineLock)
 
     def run(self):
+        """
+        Easy way to initiate a start and wait for a shutdown (Useful as a Thread target)
+        :return:
+        """
         self.start()
         self._shutdownEvent.wait()
 
     def wait_for_startup(self):
         self._startupComplete.wait()
 
+    def wait_for_shutdown(self):
+        self._shutdownEvent.wait()
+
     def stop(self):
+        """
+        Easy method to execute a shutdown and wait for the shutdown to complete
+        :return:
+        """
         self.shutdown()
-        self._shutdownEvent.set()
+        self.wait_for_shutdown()
 
     # State machine handlers
     def on_enter_not_running(self, event):
-        self.logger.info("A/V device not running")
+        self.logger.info("A/V device not running: " + self._name)
         self._startupComplete.set()
 
     def on_enter_starting(self, event):
-        self.logger.info("Starting A/V device")
+        self.logger.info("Starting A/V device: " + self._name)
         self._startupComplete.clear()
         self.connect_to_device()
 
     def on_enter_connecting(self, event):
-        self.logger.info("Connecting to A/V device")
+        self.logger.info("Connecting to A/V device: " + self._name)
 
         rv = self.connect()
         if rv:
@@ -85,32 +104,32 @@ class AvReceiver(object):
             self.connect_error(event)
 
     def on_enter_connected(self, event):
-        self.logger.info("Connected to A/V device")
+        self.logger.info("Connected to A/V device: " + self._name)
         self.start_receiver_thread()
         self.enter_run()
 
     def on_enter_running(self, event):
-        self.logger.info("A/V Device Active")
+        self.logger.info("A/V Device Active: " + self._name)
         self.initialize_state()
         self._startupComplete.set()
 
     def on_enter_disconnecting(self, event):
-        self.logger.info("Disconnecting from A/V device")
+        self.logger.info("Disconnecting from A/V device: " + self._name)
         self.stop_receiver_thread()
         self.disconnect()
         self.disconnected()
 
     def on_enter_shutting_down(self, event):
-        self.logger.info("Shutting down A/V device")
+        self.logger.info("Shutting down A/V device: " + self._name)
         self.stop_receiver_thread()
         self.disconnect()
         self._shutdownEvent.set()
 
     def on_enter_error(self, event):
-        self.logger.error("A/V device error: {}".format(event))
+        self.logger.error("A/V device error: {} - {}".format(self._name, event))
 
     """
-    These methods are used by the watchdog to move the device through it's state machine.
+    These methods are called by the state machine.
     Override them as needed.  No super is required in the overridden methods
     """
     def connect(self):

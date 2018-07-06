@@ -42,12 +42,12 @@ class VSX1021Client(AvReceiver):
 
     INVERTED_INPUTS = {v: k for k, v in INPUTS.items()}
 
-    def __init__(self, ip, port=23, logger=None):
+    def __init__(self, name, ip, port=23, logger=None):
         if logger:
             self.logger = logger
         else:
             self.logger = logging.getLogger()
-        super().__init__(logger)
+        super().__init__(name, logger)
         self._ip = ip
         self._port = port
         self._tn = None
@@ -120,7 +120,7 @@ class VSX1021Client(AvReceiver):
         while not self._stopReceiver:
             try:
                 data_bytes = self._tn.read_until(b"\r\n", 5)
-                if data_bytes == b"":
+                if data_bytes == b"" or self._stopReceiver:
                     continue
 
                 data = data_bytes.replace(b"\r\n", b"").decode("utf-8")

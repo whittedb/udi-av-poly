@@ -3,6 +3,8 @@ This is a NodeServer for the Pioneer VSX-1021 A/V Receiver for Polyglot v2 writt
 by Brad Whitted brad_whitted@gmail.com
 """
 import polyinterface
+from threading import Thread
+from av_receivers import VSX1021Client
 
 LOGGER = polyinterface.LOGGER
 
@@ -27,6 +29,8 @@ class AVDevice(polyinterface.Node):
         query(): Called when ISY sends a query request to Polyglot for this specific node
     """
 
+    TYPE = "generic"
+
     def __init__(self, controller, primary, address=None, name=None):
         """
         Optional.
@@ -39,43 +43,45 @@ class AVDevice(polyinterface.Node):
         :param name: This nodes name
         """
 
-        LOGGER.debug("AVDevice:__init__: start: address={} name={} type={} uom={}".format(address, name, type, uom))
-
-        self.address = address
-        self.id = "avDevice"    # Until we figure out the uom
-        self.name = name
-        self.controller = controller
-        self.primary_n = controller.nodes[primary]
-
-        if is_new:
-            # It's a new device
-            self.address = address
-            if tdata is None:
-                self.l_error('__init__',
-                             "New node address ({0}), name ({1}), and type ({2}) must be specified when tdata is None"
-                             .format(address, name, tag_type))
-                return
-            if uom is None:
-                self.l_error('__init__',"uom ({0}) must be specified for new tags.".format(uom))
-            self.l_debug('__init__','New node {}'.format(tdata))
-            device_type = tdata['deviceType']
-            self.tag_uom = uom
-            device_id = tdata['slaveId']
-            self.uuid = tdata['uuid']
-            address = id_to_address(self.uuid)
-            name = tdata['name']
-
-        super(AVDevice, self).__init__(controller, primary, address, name)
+        LOGGER.debug("AVDevice:__init__: start: address={} name={} type={}".format(address, name, self.TYPE))
+        self.id = AVDevice.TYPE
+        super().__init__(controller, primary, address, name)
 
     def l_info(self, name, string):
-        LOGGER.info("%s:%s:%s:%s:%s: %s" % (self.primary_n.name, self.name, self.address, self.id, name, string))
+        LOGGER.info("%s:%s:%s:%s:%s: %s" % (self.primary.name, self.name, self.address, self.id, name, string))
 
     def l_error(self, name, string):
-        LOGGER.error("%s:%s:%s:%s:%s: %s" % (self.primary_n.name, self.name, self.address, self.id, name, string))
+        LOGGER.error("%s:%s:%s:%s:%s: %s" % (self.primary.name, self.name, self.address, self.id, name, string))
 
     def l_warning(self, name, string):
-        LOGGER.warning("%s:%s:%s:%s:%s: %s" % (self.primary_n.name, self.name, self.address, self.id, name,string))
+        LOGGER.warning("%s:%s:%s:%s:%s: %s" % (self.primary.name, self.name, self.address, self.id, name, string))
 
     def l_debug(self, name, string):
-        LOGGER.debug("%s:%s:%s:%s:%s: %s" % (self.primary_n.name, self.name, self.address, self.id, name, string))
+        LOGGER.debug("%s:%s:%s:%s:%s: %s" % (self.primary.name, self.name, self.address, self.id, name, string))
 
+    commands = {}
+    drivers = [
+        {"driver": "ST", "value": 0, "uom": 2},
+        {"driver": "GV1", "value": 0, "uom": 25},   # Device Type
+        {"driver": "GV2", "value": 0, "uom": 25},   # Power
+        {"driver": "GV3", "value": 0, "uom": 25},   # Mute
+        {"driver": "GV4", "value": -80, "uom": 56},  # Volume
+        {"driver": "GV5", "value": 0, "uom": 25}  # Input Source
+    ]
+
+
+class VSX1021Node(AVDevice):
+    TYPE = "VSX1021"
+
+    def __init__(self, controller, primary, host, port, address=None, name=None):
+        self.host = host
+        self.port = port
+        super().__init__(controller, primary, address, name)
+        self.id = VSX1021Node.TYPE
+        self.client = VSX1021Client(self.TYPE + ":" + name, self.host, self.port, LOGGER)
+
+    def start(self):
+        self.client.start()
+
+    def stop(self):
+        self.client.stop()

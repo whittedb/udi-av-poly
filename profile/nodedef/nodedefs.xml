@@ -6,19 +6,19 @@
         <sts>
             <st id="ST" editor="bool"/>
             <!-- Heartbeat -->
-            <st id="GV7" editor="I_HB"/>
+            <st id="GV7" editor="HB"/>
             <!-- Debug (Log) Mode -->
-            <st id="GV6" editor="I_DM"/>
+            <st id="GV6" editor="DM"/>
             <!-- Version Major -->
             <st id="GV1" editor="FLOAT"/>
             <!-- Version Minor -->
             <st id="GV2" editor="FLOAT"/>
             <!-- Device Count -->
-            <st id="GV3" editor="I_INTEGER"/>
+            <st id="GV3" editor="INTEGER"/>
             <!-- shortpoll -->
-            <st id="GV4" editor="I_INTEGER"/>
+            <st id="GV4" editor="INTEGER"/>
             <!-- longpoll -->
-            <st id="GV5" editor="I_INTEGER"/>
+            <st id="GV5" editor="INTEGER"/>
         </sts>
         <cmds>
             <sends>
@@ -27,18 +27,59 @@
             </sends>
             <accepts>
                 <cmd id="SET_DM">
-                    <p id="" editor="I_DM" init="GV6"/>
+                    <p id="" editor="DM" init="GV6"/>
                 </cmd>
                 <cmd id="SET_SHORTPOLL">
-                    <p id="" editor="I_INTEGER" init="GV4"/>
+                    <p id="" editor="INTEGER" init="GV4"/>
                 </cmd>
                 <cmd id="SET_LONGPOLL">
-                    <p id="" editor="I_INTEGER" init="GV5"/>
+                    <p id="" editor="INTEGER" init="GV5"/>
                 </cmd>
                 <cmd id="DISCOVER"/>
                 <cmd id="REMOVE_NOTICES_ALL"/>
                 <cmd id="UPDATE_PROFILE"/>
             </accepts>
+        </cmds>
+    </nodeDef>
+    <nodeDef id="generic" nls="GENERIC">
+        <editors/>
+        <sts>
+            <st id="ST" editor="bool"/>
+            <!-- Device Type -->
+            <st id="GV1" editor="DEVICE_TYPE"/>
+            <!-- Power -->
+            <st id="GV2" editor="ON_OFF"/>
+            <!-- Mute -->
+            <st id="GV3" editor="ON_OFF"/>
+            <!-- Volume -->
+            <st id="GV4" editor="VOLUME"/>
+            <!-- Input Source -->
+            <st id="GV5" editor="SOURCE"/>
+        </sts>
+        <cmds>
+            <sends/>
+            <accepts/>
+        </cmds>
+    </nodeDef>
+
+    <nodeDef id="vsx1021" nls="VSX1021">
+        <editors/>
+        <sts>
+            <st id="ST" editor="bool"/>
+            <!-- Device Type -->
+            <st id="GV1" editor="DEVICE_TYPE"/>
+            <!-- Power -->
+            <st id="GV2" editor="ON_OFF"/>
+            <!-- Mute -->
+            <st id="GV3" editor="ON_OFF"/>
+            <!-- Volume -->
+            <st id="GV4" editor="VOLUME"/>
+            <!-- Input Source -->
+            <st id="GV5" editor="SOURCE"/>
+        </sts>
+        <cmds>
+            <sends/>
+            <accepts/>
         </cmds>
     </nodeDef>
 </nodeDefs>

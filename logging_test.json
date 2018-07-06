@@ -20,7 +20,7 @@
   },
   "loggers": {
     "transitions": {
-      "level": "INFO"
+      "level": "ERROR"
     }
   }
 }

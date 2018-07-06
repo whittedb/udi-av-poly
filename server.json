@@ -1,12 +1,12 @@
 {
     "name": "A/V Server",
     "docs": "",
-    "type": "python",
+    "type": "python3",
     "executable": "udi-av-receiver-poly.py",
     "install": "install.sh",
     "description": "Pioneer VSX-1021 Node Server",
     "notice": "No disclaimer here",
-    "shortPoll": "5",
+    "shortPoll": "10",
     "longPoll": "60",
     "credits": [
         {

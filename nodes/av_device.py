@@ -3,7 +3,6 @@ This is a NodeServer for the Pioneer VSX-1021 A/V Receiver for Polyglot v2 writt
 by Brad Whitted brad_whitted@gmail.com
 """
 import polyinterface
-from threading import Thread
 from av_receivers import VSX1021Client
 
 LOGGER = polyinterface.LOGGER

@@ -28,8 +28,8 @@ CDM-40 = Error
 CDM-50 = Critical
 
 # node type
-ND-generic-NAME = A/V Device
-ND-generic-ICON = GenericRspCtl
+ND-GENERIC-NAME = A/V Device
+ND-GENERIC-ICON = GenericRspCtl
 ND-VSX1021-NAME = VSX 1021 Receiver
 ND-VSX1021-ICON = GenericRspCtl
 
@@ -40,6 +40,8 @@ ST-GV2-NAME = Power
 ST-GV3-NAME = Mute
 ST-GV4-NAME = Volume
 ST-GV5-NAME = Input Source
+
+CMD-SET_POWER-NAME = Power
 
 DTYPE-0 = VSX1021
 
@@ -68,3 +70,4 @@ SOURCE-26 = HOME MEDIA GALLERY
 SOURCE-27 = SIRIUS
 SOURCE-31 = HDMI CYCLE
 SOURCE-33 = ADAPTER
+SOURCE-999 = ---

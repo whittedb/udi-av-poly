@@ -3,7 +3,7 @@ This is a NodeServer for the Pioneer VSX-1021 A/V Receiver for Polyglot v2 writt
 by Brad Whitted brad_whitted@gmail.com
 """
 import polyinterface
-from av_receivers import VSX1021Client
+from av_receivers import VSX1021Client, AvReceiver
 
 LOGGER = polyinterface.LOGGER
 
@@ -28,7 +28,7 @@ class AVDevice(polyinterface.Node):
         query(): Called when ISY sends a query request to Polyglot for this specific node
     """
 
-    TYPE = "generic"
+    TYPE = "GENERIC"
 
     def __init__(self, controller, primary, address=None, name=None):
         """
@@ -42,45 +42,94 @@ class AVDevice(polyinterface.Node):
         :param name: This nodes name
         """
 
-        LOGGER.debug("AVDevice:__init__: start: address={} name={} type={}".format(address, name, self.TYPE))
-        self.id = AVDevice.TYPE
+        LOGGER.debug("AVDevice:__init__: address={} name={} type={}".format(address, name, self.TYPE))
+        self.id = self.TYPE
         super().__init__(controller, primary, address, name)
 
+    """
+    Command Functions
+    """
+    def cmd_set_power(self, command):
+        val = command.get("value")
+        self.l_info("cmd_set_power", val)
+        self.set_power(val == "1")
+
+    def set_power(self, on_off):
+        pass
+
     def l_info(self, name, string):
-        LOGGER.info("%s:%s:%s:%s:%s: %s" % (self.primary.name, self.name, self.address, self.id, name, string))
+        LOGGER.info("%s: %s" % (name, string))
 
     def l_error(self, name, string):
-        LOGGER.error("%s:%s:%s:%s:%s: %s" % (self.primary.name, self.name, self.address, self.id, name, string))
+        LOGGER.error("%s: %s" % (name, string))
 
     def l_warning(self, name, string):
-        LOGGER.warning("%s:%s:%s:%s:%s: %s" % (self.primary.name, self.name, self.address, self.id, name, string))
+        LOGGER.warning("%s: %s" % (name, string))
 
     def l_debug(self, name, string):
-        LOGGER.debug("%s:%s:%s:%s:%s: %s" % (self.primary.name, self.name, self.address, self.id, name, string))
+        LOGGER.debug("%s: %s" % (name, string))
 
-    commands = {}
+    commands = {
+        "SET_POWER": cmd_set_power,
+    }
     drivers = [
         {"driver": "ST", "value": 0, "uom": 2},
         {"driver": "GV1", "value": 0, "uom": 25},   # Device Type
         {"driver": "GV2", "value": 0, "uom": 25},   # Power
         {"driver": "GV3", "value": 0, "uom": 25},   # Mute
         {"driver": "GV4", "value": -80, "uom": 56},  # Volume
-        {"driver": "GV5", "value": 0, "uom": 25}  # Input Source
+        {"driver": "GV5", "value": 999, "uom": 25}  # Input Source
     ]
 
 
-class VSX1021Node(AVDevice):
+class VSX1021Node(AVDevice, AvReceiver.Listener):
     TYPE = "VSX1021"
 
     def __init__(self, controller, primary, host, port, address=None, name=None):
         self.host = host
         self.port = port
         super().__init__(controller, primary, address, name)
-        self.id = VSX1021Node.TYPE
-        self.client = VSX1021Client(self.TYPE + ":" + name, self.host, self.port, LOGGER)
+        self.client = VSX1021Client(self.TYPE + ":" + name, self.host, self.port, logger=LOGGER)
+        self.client.set_listener(self)
+
+    def set_power(self, val):
+        self.l_debug("set_power", "CMD Power: {}".format("True" if val else "False"))
+        self.client.set_power(val == 1)
 
     def start(self):
         self.client.start()
+        self.client.wait_for_startup()
+        self.setDriver("ST", 1)
 
     def stop(self):
         self.client.stop()
+
+    def on_power(self, power_state):
+        self.l_debug("on_power", "{}".format("True" if power_state else "False"))
+        self.setDriver("GV2", 1 if power_state else 0)
+        if not power_state:
+            self.setDriver("GV5", 999)
+
+    def on_volume(self, volume):
+        self.l_debug("on_volume", "{}".format(volume))
+        self.setDriver("GV4", self.client.volume_db)
+
+    def on_mute(self, mute_state):
+        self.l_debug("on_mute", "{}".format("True" if mute_state else "False"))
+        self.setDriver("GV2", mute_state)
+
+    def on_source(self, source):
+        self.l_debug("on_source", "{}".format(VSX1021Client.INVERTED_INPUTS[source]))
+        self.setDriver("GV5", source)
+
+    def l_info(self, name, string):
+        LOGGER.info("%s:%s: %s" % (self.id, name, string))
+
+    def l_error(self, name, string):
+        LOGGER.error("%s:%s: %s" % (self.id, name, string))
+
+    def l_warning(self, name, string):
+        LOGGER.warning("%s:%s: %s" % (self.id, name, string))
+
+    def l_debug(self, name, string):
+        LOGGER.debug("%s:%s: %s" % (self.id, name, string))

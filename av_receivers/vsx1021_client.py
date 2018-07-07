@@ -62,7 +62,7 @@ class VSX1021Client(AvReceiver):
             self._tn = telnetlib.Telnet(self._ip, self._port)
             return True
         except socket.timeout:
-            logger.error("Error connecting to device")
+            self.logger.error("Error connecting to device")
             return False
 
     def disconnect(self):
@@ -73,7 +73,7 @@ class VSX1021Client(AvReceiver):
         self._receiverThread.start()
 
     def stop_receiver_thread(self):
-        logger.info("Stopping receiver thread")
+        self.logger.info("Stopping receiver thread")
         self._stopReceiver = True
         # Request some data to speed up the receiver thread shutdown
         self.update_power_state()
@@ -92,13 +92,13 @@ class VSX1021Client(AvReceiver):
         command = cmd + '\r'
 
         self._tn.read_eager()  # Cleanup any pending output.
-        logger.debug("--> {}".format(command))
+        self.logger.debug("--> {}".format(command))
         self._tn.write(command.encode("ascii"))
 
     "Receive data"""
     def _receive(self):
         data = self._tn.read_eager().replace(b"\r\n", b"").decode("utf-8")
-        logger.debug("<-- {}".format(data))
+        self.logger.debug("<-- {}".format(data))
         return data
 
     "Send a command and receive the response"""
@@ -114,7 +114,7 @@ class VSX1021Client(AvReceiver):
 
     "Continually receive data. Entry point for async read thread."""
     def _receiver_start(self):
-        logger.info("Starting receiver thread")
+        self.logger.info("Starting receiver thread")
 
         self._stopReceiver = False
         while not self._stopReceiver:
@@ -124,11 +124,11 @@ class VSX1021Client(AvReceiver):
                     continue
 
                 data = data_bytes.replace(b"\r\n", b"").decode("utf-8")
-                logger.debug("<-- {}".format(data))
+                self.logger.debug("<-- {}".format(data))
 
                 self.update_state(data)
             except socket.error as e:
-                logger.debug("Socket error on read, {}".format(e))
+                self.logger.debug("Socket error on read, {}".format(e))
                 self.read_error(e)
 
     "Update Power State"""
@@ -139,26 +139,26 @@ class VSX1021Client(AvReceiver):
             AvReceiver.set_power(self, value == "0")
         if command == "VOL":
             vol = int(value)
-            AvReceiver.set_volume(self, vol)
             self._volDbScale = (vol - 161) / 2
             self._vol100Scale = int(vol / 1.65)
+            AvReceiver.set_volume(self, vol)
         if command == "MUT":
             AvReceiver.set_mute(self, value == "0")
         if command == "E04":
-            logger.warn("COMMAND ERROR")
+            self.logger.warn("COMMAND ERROR")
         if command == "E06":
-            logger.warn("PARAMETER ERROR")
+            self.logger.warn("PARAMETER ERROR")
         if command == "B00":
-            logger.warn("RECEIVER BUSY")
+            self.logger.warn("RECEIVER BUSY")
 
         command = data[0:2]
         if command == "FN":
             code = data[2:4]
-            AvReceiver.set_source(self, code)
             try:
                 self._sourceText = self.INVERTED_INPUTS[code]
             except KeyError:
                 self._sourceText = "Unknown input found: {}".format(code)
+            AvReceiver.set_source(self, code)
 
     def update_power_state(self):
         self._send("?P")
@@ -211,14 +211,14 @@ class VSX1021Client(AvReceiver):
     def set_volume_db(self, volume):
         scaled_volume = int(round((volume * 2) + 161, 0))
         formatted = "{}VL".format(str(scaled_volume).zfill(3))
-        logger.debug("Volume: {}, Scaled: {}, Formatted: {}".format(volume, scaled_volume, formatted))
+        self.logger.debug("Volume: {}, Scaled: {}, Formatted: {}".format(volume, scaled_volume, formatted))
         self._send(formatted)
 
     "Set volume to specific value on 0-100 scale"""
     def set_volume100(self, volume):
         scaled_volume = int(myround(volume * 1.85, 0, 1))
         formatted = "{}VL".format(str(scaled_volume).zfill(3))
-        logger.debug("Volume: {}, Scaled: {}, Formatted: {}".format(volume, scaled_volume, formatted))
+        self.logger.debug("Volume: {}, Scaled: {}, Formatted: {}".format(volume, scaled_volume, formatted))
         self._send(formatted)
 
     "Mute/Unmute sound"""

@@ -2,7 +2,7 @@ import logging
 from copy import deepcopy
 import polyinterface
 import json
-from av_funcs import get_server_data
+from av_funcs import get_server_data, get_profile_info
 from nodes.node_factory import build as NodeBuilder
 
 
@@ -62,6 +62,8 @@ class AVController(polyinterface.Controller):
         self.serverdata = get_server_data(LOGGER)
         self.l_info("init", "Initializing A/V NodeServer version %s" % str(self.serverdata["version"]))
         self.hb = 0
+        self.profile_info = None
+        self.update_profile = False
         self.debug_mode = DEFAULT_DEBUG_MODE
         self.short_poll = DEFAULT_SHORT_POLL
         self.long_poll = DEFAULT_LONG_POLL
@@ -92,6 +94,7 @@ class AVController(polyinterface.Controller):
         else:
             self.long_poll = v
 
+        self.check_profile()
         self.discover()
 
     def load_params(self):
@@ -205,6 +208,23 @@ class AVController(polyinterface.Controller):
         self.l_debug("add_config_devices", "{} existing nodes to add".format(len(config_nodes)))
         for node in config_nodes.values():
             self.add_config_node(node)
+
+    def check_profile(self):
+        self.profile_info = get_profile_info(LOGGER)
+        
+        # Set Default profile version if not Found
+        cd = deepcopy(self.polyConfig["customData"])
+        self.l_info("check_profile", "profile_info={0} customData={1}".format(self.profile_info, cd))
+        if "profile_info" not in cd:
+            cd["profile_info"] = {"version": 0}
+        if self.profile_info["version"] == cd["profile_info"]["version"]:
+            self.update_profile = False
+        else:
+            self.update_profile = True
+            self.poly.installprofile()
+        self.l_info("check_profile", "update_profile={}".format(self.update_profile))
+        cd["profile_info"] = self.profile_info
+        self.saveCustomData(cd)
 
     def shortPoll(self):
         """
@@ -327,7 +347,7 @@ class AVController(polyinterface.Controller):
         if node is not None:
             self.l_debug("discover", "Adding node: {}, Address: {}, Host: {}, Port: {}"
                          .format(node.name, node.address, node.host, node.port))
-            self.update_custom_data(node)
+            self.update_custom_node_data(node)
             self.addNode(node)
 
         return node
@@ -338,9 +358,8 @@ class AVController(polyinterface.Controller):
         :param node:
         :return:
         """
-        cd = self.polyConfig["customData"]
         try:
-            data = cd[node["address"]]
+            data = self.get_custom_node_data(node["address"])
             LOGGER.debug("Building Node: address={}, type={}, name={}, host={}, port={}"
                          .format(node["address"], data["type"], data["name"], data["host"], data["port"]))
             new_node = NodeBuilder(controller=self, primary=self.address, address=node["address"],
@@ -350,7 +369,7 @@ class AVController(polyinterface.Controller):
                 self.l_debug("add_existing_devices", "Adding existing: {}, Address: {}, Host: {}, Port: {}"
                              .format(new_node.name, new_node.address, new_node.host, new_node.port))
                 self.addNode(new_node)
-                self.update_custom_data(new_node)
+                self.update_custom_node_data(new_node)
         except KeyError:
             # Delete if no custom data for this node
             self.l_debug("add_existing_devices",
@@ -358,32 +377,38 @@ class AVController(polyinterface.Controller):
             self.delNode(node["address"])
 
     def delete_node(self, address):
-        cd = self.polyConfig["customData"]
+        cd = self.polyConfig["customData"]["node_data"]
 
         self.delNode(address)
         cd.pop(address)
         self.saveCustomData(cd)
 
-    def update_custom_data(self, node):
+    def update_custom_node_data(self, node):
         cd = deepcopy(self.polyConfig["customData"])
-        node_data = {
-            "type": node.TYPE,
-            "name": node.name,
-            "host": node.host,
-            "port": node.port
-        }
-        cd.update({node.address: node_data})
+        try:
+            node_data = cd["node_data"]
+        except KeyError:
+            node_data = {}
+            cd["node_data"] = node_data
+
+        node_data.update({node.address: {
+                    "type": node.TYPE,
+                    "name": node.name,
+                    "host": node.host,
+                    "port": node.port
+                }
+        })
         self.saveCustomData(cd)
 
-    def get_custom_data(self, address):
-        cd = self.polyConfig["customData"]
-        return cd.get(address)
+    def get_custom_node_data(self, address):
+        node_data = self.polyConfig["customData"]["node_data"]
+        return node_data.get(address)
 
     @classmethod
     def set_all_logs(cls, level):
         LOGGER.setLevel(level)
         logging.getLogger("av_receiver").setLevel(level)
-#        logging.getLogger("requests").setLevel(level)
+        logging.getLogger("transitions").setLevel(level)
 #        logging.getLogger("urllib3").setLevel(level)
 
     def l_info(self, name, string):

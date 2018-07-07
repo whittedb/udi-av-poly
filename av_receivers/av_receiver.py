@@ -46,8 +46,21 @@ class AvReceiver(object):
     """
     _stateMachine = StateMachine()
 
-    def __init__(self, name, logger):
-        if logger:
+    class Listener(object):
+        def on_power(self, power_state):
+            pass
+
+        def on_volume(self, volume):
+            pass
+
+        def on_mute(self, mute_state):
+            pass
+
+        def on_source(self, source):
+            pass
+
+    def __init__(self, name, logger=None):
+        if logger is not None:
             self.logger = logger
         else:
             self.logger = logging.getLogger()
@@ -59,8 +72,12 @@ class AvReceiver(object):
         self._volume = None
         self._mute = None
         self._source = None
+        self.listeners = []
 
         self._stateMachine.add_model(model=self, model_context=self._stateMachineLock)
+
+    def set_listener(self, listener):
+        self.listeners.append(listener)
 
     def run(self):
         """
@@ -169,14 +186,22 @@ class AvReceiver(object):
 
     def set_power(self, power_state):
         self._power = power_state
+        for l in self.listeners:
+            l.on_power(self._power)
 
     # Set raw device volume
     def set_volume(self, volume):
         self._volume = volume
+        for l in self.listeners:
+            l.on_volume(self._volume)
 
     def set_mute(self, mute_state):
         self._mute = mute_state
+        for l in self.listeners:
+            l.on_mute(self._mute)
 
     # Set raw device input source value
     def set_source(self, source):
         self._source = source
+        for l in self.listeners:
+            l.on_source(self.source)

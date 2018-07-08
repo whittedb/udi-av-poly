@@ -1,7 +1,6 @@
 import logging
 from copy import deepcopy
 import polyinterface
-import json
 from av_funcs import get_server_data, get_profile_info
 from nodes.node_factory import build as NodeBuilder
 
@@ -263,7 +262,6 @@ class AVController(polyinterface.Controller):
         self.heartbeat()
 
     def heartbeat(self):
-        self.l_debug("heartbeat", "hb={}".format(self.hb))
         if self.hb is None or self.hb == 0:
             self.reportCmd("DON", 2)
             self.hb = 1
@@ -279,7 +277,6 @@ class AVController(polyinterface.Controller):
         nodes back to ISY. If you override this method you will need to Super or
         issue a reportDrivers() to each node manually.
         """
-        self.l_debug("query", "-> Enter")
         device_nodes = self.get_device_nodes()
         self.set_device_count(len(device_nodes))
         self.setDriver("GV1", self.serverdata["version_major"])
@@ -288,7 +285,6 @@ class AVController(polyinterface.Controller):
         self.l_debug("query", "Report drivers for {} nodes".format(len(self.nodes)))
         for node in self.nodes.values():
             node.reportDrivers()
-        self.l_debug("query", "<- Exit")
 
     def delete(self):
         """
@@ -385,11 +381,11 @@ class AVController(polyinterface.Controller):
 
     def update_custom_node_data(self, node):
         cd = deepcopy(self.polyConfig["customData"])
-        try:
-            node_data = cd["node_data"]
-        except KeyError:
+        if "node_data" not in cd:
             node_data = {}
             cd["node_data"] = node_data
+        else:
+            node_data = cd["node_data"]
 
         node_data.update({node.address: {
                     "type": node.TYPE,

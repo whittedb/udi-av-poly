@@ -46,15 +46,16 @@ class AVDevice(polyinterface.Node):
         self.id = self.TYPE
         super().__init__(controller, primary, address, name)
 
-    """
-    Command Functions
-    """
-    def cmd_set_power(self, command):
-        val = command.get("value")
-        self.l_info("cmd_set_power", val)
-        self.set_power(val == "1")
-
     def set_power(self, on_off):
+        pass
+
+    def set_mute(self, on_off):
+        pass
+
+    def set_volume(self, volume):
+        pass
+
+    def set_source(self, source):
         pass
 
     def l_info(self, name, string):
@@ -69,9 +70,7 @@ class AVDevice(polyinterface.Node):
     def l_debug(self, name, string):
         LOGGER.debug("%s: %s" % (name, string))
 
-    commands = {
-        "SET_POWER": cmd_set_power,
-    }
+    commands = {}
     drivers = [
         {"driver": "ST", "value": 0, "uom": 2},
         {"driver": "GV1", "value": 0, "uom": 25},   # Device Type
@@ -88,13 +87,10 @@ class VSX1021Node(AVDevice, AvReceiver.Listener):
     def __init__(self, controller, primary, host, port, address=None, name=None):
         self.host = host
         self.port = port
+        self.commands.update(self.my_commands)
         super().__init__(controller, primary, address, name)
         self.client = VSX1021Client(self.TYPE + ":" + name, self.host, self.port, logger=LOGGER)
         self.client.set_listener(self)
-
-    def set_power(self, val):
-        self.l_debug("set_power", "CMD Power: {}".format("True" if val else "False"))
-        self.client.set_power(val == 1)
 
     def start(self):
         self.client.start()
@@ -103,6 +99,22 @@ class VSX1021Node(AVDevice, AvReceiver.Listener):
 
     def stop(self):
         self.client.stop()
+
+    def set_power(self, val):
+        self.l_debug("set_power", "CMD Power: {}".format("True" if val else "False"))
+        self.client.set_power(val == 1)
+
+    def set_mute(self, val):
+        self.l_debug("set_mute", "CMD Mute: {}".format("True" if val else "False"))
+        self.client.set_mute(val == 1)
+
+    def set_volume(self, val):
+        self.l_debug("set_volume", "CMD Volume: {}".format(val))
+        self.client.set_volume_db(float(val))
+
+    def set_source(self, val):
+        self.l_debug("set_volume", "CMD Source: {}".format(VSX1021Client.INVERTED_INPUTS[val]))
+        self.client.set_source(val)
 
     def on_power(self, power_state):
         self.l_debug("on_power", "{}".format("True" if power_state else "False"))
@@ -116,11 +128,34 @@ class VSX1021Node(AVDevice, AvReceiver.Listener):
 
     def on_mute(self, mute_state):
         self.l_debug("on_mute", "{}".format("True" if mute_state else "False"))
-        self.setDriver("GV2", mute_state)
+        self.setDriver("GV3", 1 if mute_state else 0)
 
     def on_source(self, source):
         self.l_debug("on_source", "{}".format(VSX1021Client.INVERTED_INPUTS[source]))
         self.setDriver("GV5", source)
+
+    """
+    Command Functions
+    """
+    def cmd_set_power(self, command):
+        val = command.get("value")
+        self.l_info("cmd_set_power", val)
+        self.set_power(val == "1")
+
+    def cmd_set_mute(self, command):
+        val = command.get("value")
+        self.l_info("cmd_set_mute", val)
+        self.set_mute(val == "1")
+
+    def cmd_set_volume(self, command):
+        val = command.get("value")
+        self.l_info("cmd_set_volume", val)
+        self.set_volume(val)
+
+    def cmd_set_source(self, command):
+        val = command.get("value")
+        self.l_info("cmd_set_source", val)
+        self.set_source(val)
 
     def l_info(self, name, string):
         LOGGER.info("%s:%s: %s" % (self.id, name, string))
@@ -133,3 +168,10 @@ class VSX1021Node(AVDevice, AvReceiver.Listener):
 
     def l_debug(self, name, string):
         LOGGER.debug("%s:%s: %s" % (self.id, name, string))
+
+    my_commands = {
+        "SET_POWER": cmd_set_power,
+        "SET_MUTE": cmd_set_mute,
+        "SET_VOLUME": cmd_set_volume,
+        "SET_SOURCE": cmd_set_source
+    }

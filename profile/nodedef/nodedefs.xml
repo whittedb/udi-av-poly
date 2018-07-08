@@ -92,6 +92,15 @@
                 <cmd id="SET_POWER">
                     <p id="" editor="I_ON_OFF" init="GV2"/>
                 </cmd>
+                <cmd id="SET_MUTE">
+                    <p id="" editor="I_ON_OFF" init="GV3"/>
+                </cmd>
+                <cmd id="SET_VOLUME">
+                    <p id="" editor="I_DB_VOLUME" init="GV4"/>
+                </cmd>
+                <cmd id="SET_SOURCE">
+                    <p id="" editor="I_SOURCE" init="GV5"/>
+                </cmd>
             </accepts>
         </cmds>
     </nodeDef>

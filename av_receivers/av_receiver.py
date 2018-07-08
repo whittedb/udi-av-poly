@@ -187,18 +187,18 @@ class AvReceiver(object):
     def set_power(self, power_state):
         self._power = power_state
         for l in self.listeners:
-            l.on_power(self._power)
+            l.on_power(self.power)
 
     # Set raw device volume
     def set_volume(self, volume):
         self._volume = volume
         for l in self.listeners:
-            l.on_volume(self._volume)
+            l.on_volume(self.volume)
 
     def set_mute(self, mute_state):
         self._mute = mute_state
         for l in self.listeners:
-            l.on_mute(self._mute)
+            l.on_mute(self.mute)
 
     # Set raw device input source value
     def set_source(self, source):

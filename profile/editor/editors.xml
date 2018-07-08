@@ -29,7 +29,7 @@
     </editor>
 
     <editor id="I_DB_VOLUME">
-        <range uom="14" min="-80" max="12" step=".5" prec="1"/>
+        <range uom="13" min="-80" max="12" step=".5" prec="1"/>
     </editor>
 
     <editor id="I_SOURCE">

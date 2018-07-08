@@ -131,19 +131,22 @@ class VSX1021Client(AvReceiver):
                 self.logger.debug("Socket error on read, {}".format(e))
                 self.read_error(e)
 
+    def query_source(self):
+        self._send("FN")
+
     "Update Power State"""
     def update_state(self, data):
         command = data[0:3]
         value = data[3:]
         if command == "PWR":
-            AvReceiver.set_power(self, value == "0")
+            super().set_power(value == "0")
         if command == "VOL":
             vol = int(value)
             self._volDbScale = (vol - 161) / 2
             self._vol100Scale = int(vol / 1.65)
-            AvReceiver.set_volume(self, vol)
+            super().set_volume(vol)
         if command == "MUT":
-            AvReceiver.set_mute(self, value == "0")
+            super().set_mute(value == "0")
         if command == "E04":
             self.logger.warn("COMMAND ERROR")
         if command == "E06":
@@ -158,7 +161,7 @@ class VSX1021Client(AvReceiver):
                 self._sourceText = self.INVERTED_INPUTS[code]
             except KeyError:
                 self._sourceText = "Unknown input found: {}".format(code)
-            AvReceiver.set_source(self, code)
+            super().set_source(code)
 
     def update_power_state(self):
         self._send("?P")

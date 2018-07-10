@@ -3,7 +3,7 @@ import telnetlib
 import socket
 from threading import Thread
 from time import sleep
-from av_receivers.av_receiver import AvReceiver
+from av_receivers.av_device import AvDevice
 
 
 logger = logging.getLogger()
@@ -13,7 +13,7 @@ def myround(x, prec=1, base=.5):
     return round(base * round(float(x) / base), prec)
 
 
-class VSX1021Client(AvReceiver):
+class VSX1021Client(AvDevice):
     """ Telnet client to Pioneer VSX 1021 AVR """
     INPUTS = {
         "PHONO":        "00",
@@ -61,30 +61,33 @@ class VSX1021Client(AvReceiver):
         try:
             self._tn = telnetlib.Telnet(self._ip, self._port)
             return True
-        except socket.timeout:
+        except socket.timeout as e:
             self.logger.error("Error connecting to device")
-            return False
+            self.connect_error(error=e)
 
     def disconnect(self):
-        self._tn.close()
+        try:
+            if self._tn is not None:
+                self._tn.close()
+        except EOFError:
+            pass
 
     def start_receiver_thread(self):
         self._receiverThread = Thread(name="VSX1021 Receiver", target=self._receiver_start)
         self._receiverThread.start()
 
-    def stop_receiver_thread(self):
-        self.logger.info("Stopping receiver thread")
+    def stop_receiver_thread(self, socket_error=False):
+        self.logger.debug("Stopping receiver thread")
         self._stopReceiver = True
-        # Request some data to speed up the receiver thread shutdown
-        self.update_power_state()
+
+        # If we are not stopping due to a read error, then request some data to speed up the receiver thread shutdown
+        if not socket_error:
+            self._send("?P")
         self._receiverThread.join()
         self._receiverThread = None
     
     def initialize_state(self):
-        self.update_power_state()
-        self.update_volume()
-        self.update_mute()
-        self.update_source()
+        self.update_all_states()
         sleep(1)
 
     "Sends single command to AV"""
@@ -114,7 +117,7 @@ class VSX1021Client(AvReceiver):
 
     "Continually receive data. Entry point for async read thread."""
     def _receiver_start(self):
-        self.logger.info("Starting receiver thread")
+        self.logger.debug("Starting receiver thread")
 
         self._stopReceiver = False
         while not self._stopReceiver:
@@ -126,16 +129,14 @@ class VSX1021Client(AvReceiver):
                 data = data_bytes.replace(b"\r\n", b"").decode("utf-8")
                 self.logger.debug("<-- {}".format(data))
 
-                self.update_state(data)
+                self._update_states(data)
             except socket.error as e:
                 self.logger.debug("Socket error on read, {}".format(e))
-                self.read_error(e)
+                self.read_error(error=e)
 
-    def query_source(self):
-        self._send("FN")
+        self.logger.debug("Receiver thread exiting")
 
-    "Update Power State"""
-    def update_state(self, data):
+    def _update_states(self, data):
         command = data[0:3]
         value = data[3:]
         if command == "PWR":
@@ -163,20 +164,32 @@ class VSX1021Client(AvReceiver):
                 self._sourceText = "Unknown input found: {}".format(code)
             super().set_source(code)
 
-    def update_power_state(self):
-        self._send("?P")
+    def update_power(self):
+        if self.is_running():
+            self._send("?P")
 
     def update_volume(self):
-        self._send("?V")
+        if self.is_running():
+            self._send("?V")
 
     def update_input(self):
-        self._send("?F")
+        if self.is_running():
+            self._send("?F")
 
     def update_mute(self):
-        self._send("?M")
+        if self.is_running():
+            self._send("?M")
 
     def update_source(self):
-        self._send("?F")
+        if self.is_running():
+            self._send("?F")
+
+    def update_all_states(self):
+        if self.is_running():
+            self.update_power()
+            self.update_volume()
+            self.update_mute()
+            self.update_input()
 
     "Returns device volume in -80 - +12 scale (device scale in DB)"""
     @property

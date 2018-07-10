@@ -3,12 +3,12 @@ This is a NodeServer for the Pioneer VSX-1021 A/V Receiver for Polyglot v2 writt
 by Brad Whitted brad_whitted@gmail.com
 """
 import polyinterface
-from av_receivers import VSX1021Client, AvReceiver
+from av_receivers import VSX1021Client, AvDevice
 
 LOGGER = polyinterface.LOGGER
 
 
-class AVDevice(polyinterface.Node):
+class PolyAVDevice(polyinterface.Node):
     """
     This is the class that all the Nodes will be represented by.  You will add this to
     Polyglot/ISY with the controller.addNode method
@@ -81,24 +81,26 @@ class AVDevice(polyinterface.Node):
     ]
 
 
-class VSX1021Node(AVDevice, AvReceiver.Listener):
+class VSX1021Node(PolyAVDevice, AvDevice.Listener):
     TYPE = "VSX1021"
 
     def __init__(self, controller, primary, host, port, address=None, name=None):
         self.host = host
         self.port = port
-        self.commands.update(self.my_commands)
+        self.commands.update(self.vsx1021_commands)
+        self.drivers.extend(self.vsx1021_drivers)
         super().__init__(controller, primary, address, name)
         self.client = VSX1021Client(self.TYPE + ":" + name, self.host, self.port, logger=LOGGER)
-        self.client.set_listener(self)
+        self.client.add_listener(self)
 
     def start(self):
         self.client.start()
         self.client.wait_for_startup()
-        self.setDriver("ST", 1)
+        self.reportDrivers()
 
     def stop(self):
         self.client.stop()
+        self.reportDrivers()
 
     def set_power(self, val):
         self.l_debug("set_power", "CMD Power: {}".format("True" if val else "False"))
@@ -115,6 +117,12 @@ class VSX1021Node(AVDevice, AvReceiver.Listener):
     def set_source(self, val):
         self.l_debug("set_volume", "CMD Source: {}".format(VSX1021Client.INVERTED_INPUTS[val]))
         self.client.set_source(val)
+
+    def on_connected(self):
+        self.setDriver("ST", 1)
+
+    def on_disconnected(self):
+        self.setDriver("ST", 0)
 
     def on_power(self, power_state):
         self.l_debug("on_power", "{}".format("True" if power_state else "False"))
@@ -169,9 +177,12 @@ class VSX1021Node(AVDevice, AvReceiver.Listener):
     def l_debug(self, name, string):
         LOGGER.debug("%s:%s: %s" % (self.id, name, string))
 
-    my_commands = {
+    vsx1021_commands = {
         "SET_POWER": cmd_set_power,
         "SET_MUTE": cmd_set_mute,
         "SET_VOLUME": cmd_set_volume,
         "SET_SOURCE": cmd_set_source
     }
+
+    vsx1021_drivers = [
+    ]

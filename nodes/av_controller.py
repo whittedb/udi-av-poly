@@ -64,11 +64,8 @@ class AVController(polyinterface.Controller):
         self.profile_info = None
         self.update_profile = False
         self.debug_mode = DEFAULT_DEBUG_MODE
-        self.short_poll = DEFAULT_SHORT_POLL
-        self.long_poll = DEFAULT_LONG_POLL
         super().__init__(polyglot)
         self.name = "AV Controller"
-        # self.address = "avcontroller"
         self.primary = self.address
 
     def start(self):
@@ -81,20 +78,17 @@ class AVController(polyinterface.Controller):
         version does nothing.
         """
         self.l_info("init", "Starting A/V NodeServer version %s" % str(self.serverdata["version"]))
-        v = self.polyConfig["shortPoll"]
-        if v is None or v == 0:
-            self.polyConfig["shortPoll"] = self.short_poll
-        else:
-            self.short_poll = v
-
-        self.long_poll = self.polyConfig["longPoll"]
-        if v is None or v == 0:
-            self.polyConfig["longPoll"] = self.long_poll
-        else:
-            self.long_poll = v
-
         self.check_profile()
         self.discover()
+
+        device_nodes = self.get_device_nodes()
+        self.set_device_count(len(device_nodes))
+        self.setDriver("GV1", self.serverdata["version_major"])
+        self.setDriver("GV2", self.serverdata["version_minor"])
+        self.setDriver("GV6", self.debug_mode)
+
+        self.setDriver("ST", 1)
+        self.reportDrivers()
 
     def load_params(self):
         """
@@ -232,25 +226,7 @@ class AVController(polyinterface.Controller):
         or longPoll. No need to Super this method the parent version does nothing.
         The timer can be overriden in the server.json.
         """
-        if not self.ready:
-            # Debug mode
-            self.setDriver("GV6", self.debug_mode)
-
-            # Short Poll
-            v = self.getDriver("GV4")
-            if v is None or int(v) == 0:
-                v = self.polyConfig["shortPoll"]
-            self.set_short_poll(v)
-
-            # Long Poll
-            v = self.getDriver("G5")
-            if v is None or int(v) == 0:
-                v = self.polyConfig["longPoll"]
-            self.set_long_poll(v)
-
-            self.query()
-            self.ready = True
-            self.setDriver("ST", 1)
+        pass
 
     def longPoll(self):
         """
@@ -263,12 +239,10 @@ class AVController(polyinterface.Controller):
 
     def heartbeat(self):
         if self.hb is None or self.hb == 0:
-            self.reportCmd("DON", 2)
             self.hb = 1
         else:
-            self.reportCmd("DOF", 2)
             self.hb = 0
-        self.setDriver("GV7", self.hb)
+        self.setDriver("GV4", self.hb)
 
     def query(self):
         """
@@ -277,14 +251,7 @@ class AVController(polyinterface.Controller):
         nodes back to ISY. If you override this method you will need to Super or
         issue a reportDrivers() to each node manually.
         """
-        device_nodes = self.get_device_nodes()
-        self.set_device_count(len(device_nodes))
-        self.setDriver("GV1", self.serverdata["version_major"])
-        self.setDriver("GV2", self.serverdata["version_minor"])
-
-        self.l_debug("query", "Report drivers for {} nodes".format(len(self.nodes)))
-        for node in self.nodes.values():
-            node.reportDrivers()
+        super().query()
 
     def delete(self):
         """
@@ -313,14 +280,6 @@ class AVController(polyinterface.Controller):
 
     def set_device_count(self, count):
         self.setDriver("GV3", count)
-
-    def get_node(self, address):
-        """
-        Gets a node that already exists in the controller
-        :param address:
-        :return:
-        """
-        return self.nodes.get(address)
 
     def get_device_nodes(self):
         return {k: v for k, v in self.nodes.items() if v.address != "controller"}
@@ -403,7 +362,7 @@ class AVController(polyinterface.Controller):
     @classmethod
     def set_all_logs(cls, level):
         LOGGER.setLevel(level)
-        logging.getLogger("av_receiver").setLevel(level)
+        logging.getLogger("av_device").setLevel(level)
         logging.getLogger("transitions").setLevel(level)
 #        logging.getLogger("urllib3").setLevel(level)
 
@@ -426,7 +385,7 @@ class AVController(polyinterface.Controller):
             level = int(level)
         self.debug_mode = level
         self.addCustomParam({"debugMode": self.debug_mode})
-        self.setDriver("GV6", level)
+        self.setDriver("GV5", level)
         # 0=All 10=Debug are the same because 0 (NOTSET) doesn't show everything.
         if level == 0 or level == 10:
             self.set_all_logs(logging.DEBUG)
@@ -441,22 +400,6 @@ class AVController(polyinterface.Controller):
         else:
             self.l_error("set_debug_level", "Unknown level {0}".format(level))
 
-    def set_short_poll(self, val):
-        if val is None or int(val) < 10:
-            val = 10
-        self.short_poll = int(val)
-        self.setDriver("GV4", self.short_poll)
-        self.polyConfig["shortPoll"] = self.short_poll
-
-    def set_long_poll(self, val):
-        if val is None:
-            val = 300
-        if int(val) > 300:
-            val = 300
-        self.long_poll = int(val)
-        self.setDriver("GV5", self.long_poll)
-        self.polyConfig["longPoll"] = self.long_poll
-
     """
     Command Functions
     """
@@ -464,16 +407,6 @@ class AVController(polyinterface.Controller):
         val = command.get("value")
         self.l_info("cmd_set_debug_mode", val)
         self.set_debug_mode(val)
-
-    def cmd_set_short_poll(self, command):
-        val = command.get("value")
-        self.l_info("cmd_set_short_poll", val)
-        self.set_short_poll(val)
-
-    def cmd_set_long_poll(self, command):
-        val = int(command.get("value"))
-        self.l_info("cmd_set_long_poll", val)
-        self.set_long_poll(val)
 
     """
     Optional.
@@ -486,8 +419,6 @@ class AVController(polyinterface.Controller):
     id = "avController"
     commands = {
         "SET_DM": cmd_set_debug_mode,
-        "SET_SHORTPOLL": cmd_set_short_poll,
-        "SET_LONGPOLL":  cmd_set_long_poll,
         "DISCOVER": discover,
         "UPDATE_PROFILE": update_profile,
         "REMOVE_NOTICES_ALL": remove_notices_all
@@ -497,10 +428,8 @@ class AVController(polyinterface.Controller):
         {"driver": "GV1", "value": 0, "uom": 56},   # vmaj: Version Major
         {"driver": "GV2", "value": 0, "uom": 56},   # vmin: Version Minor
         {"driver": "GV3", "value": 0, "uom": 56},   # device count
-        {"driver": "GV4", "value": DEFAULT_SHORT_POLL, "uom": 56},  # shortpoll
-        {"driver": "GV5", "value": DEFAULT_LONG_POLL, "uom": 56},  # longpoll
-        {"driver": "GV7", "value": 0, "uom": 25},   # heartbeat
-        {"driver": "GV6", "value": DEFAULT_DEBUG_MODE, "uom": 25}    # Debug (Log) Mode
+        {"driver": "GV4", "value": 0, "uom": 25},   # heartbeat
+        {"driver": "GV5", "value": DEFAULT_DEBUG_MODE, "uom": 25}    # Debug (Log) Mode
     ]
 
 

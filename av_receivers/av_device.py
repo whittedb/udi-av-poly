@@ -1,8 +1,10 @@
 import logging
 from threading import Event, RLock
+from transitions.extensions.states import add_state_features, Timeout
 from transitions.extensions import LockedMachine as Machine
 
 
+@add_state_features(Timeout)
 class StateMachine(Machine):
     def __init__(self):
         states = [
@@ -13,12 +15,11 @@ class StateMachine(Machine):
             "running",
             "disconnecting",
             "shutting_down",
-            "connect_error",
-            "socket_error",
-            "error"
+            "error",
+            {"name": "reconnect", "timeout": 10, "on_timeout": "start"}
         ]
         transitions = [
-            {"trigger": "start", "source": "not_running", "dest": "starting"},
+            {"trigger": "start", "source": ["not_running", "reconnect"], "dest": "starting"},
             {"trigger": "connect_to_device", "source": "starting", "dest": "connecting"},
             {"trigger": "connected_to_device", "source": "connecting", "dest": "connected"},
             {"trigger": "enter_run", "source": "connected", "dest": "running"},
@@ -28,15 +29,15 @@ class StateMachine(Machine):
             {"trigger": "disconnected", "source": "disconnecting", "dest": "not_running"},
             {"trigger": "shutdown", "source": "*", "dest": "shutting_down"},
 
-            {"trigger": "connection_error", "source": "connecting", "dest": "error"},
+            {"trigger": "connect_error", "source": "connecting", "dest": "error"},
             {"trigger": "read_error", "source": "running", "dest": "error"},
-
+            {"trigger": "reconnect", "source": ["error", "connecting"], "dest": "starting"},
         ]
         super().__init__(model=None, states=states, transitions=transitions,
                          initial="not_running", send_event=True, queued=True, auto_transitions=False)
 
 
-class AvReceiver(object):
+class AvDevice(object):
     """
     Trigger methods created by the state machine
 
@@ -59,6 +60,12 @@ class AvReceiver(object):
         def on_source(self, source):
             pass
 
+        def on_connected(self):
+            pass
+
+        def on_disconnected(self):
+            pass
+
     def __init__(self, name, logger=None):
         if logger is not None:
             self.logger = logger
@@ -76,7 +83,7 @@ class AvReceiver(object):
 
         self._stateMachine.add_model(model=self, model_context=self._stateMachineLock)
 
-    def set_listener(self, listener):
+    def add_listener(self, listener):
         self.listeners.append(listener)
 
     def run(self):
@@ -114,11 +121,8 @@ class AvReceiver(object):
     def on_enter_connecting(self, event):
         self.logger.info("Connecting to A/V device: " + self._name)
 
-        rv = self.connect()
-        if rv:
+        if self.connect():
             self.connected_to_device()
-        else:
-            self.connect_error(event)
 
     def on_enter_connected(self, event):
         self.logger.info("Connected to A/V device: " + self._name)
@@ -127,8 +131,14 @@ class AvReceiver(object):
 
     def on_enter_running(self, event):
         self.logger.info("A/V Device Active: " + self._name)
+        for l in self.listeners:
+            l.on_connected()
         self.initialize_state()
         self._startupComplete.set()
+
+    def on_exit_running(self, event):
+        for l in self.listeners:
+            l.on_disconnected()
 
     def on_enter_disconnecting(self, event):
         self.logger.info("Disconnecting from A/V device: " + self._name)
@@ -143,7 +153,17 @@ class AvReceiver(object):
         self._shutdownEvent.set()
 
     def on_enter_error(self, event):
-        self.logger.error("A/V device error: {} - {}".format(self._name, event))
+        e = event.kwargs.get("error")
+
+        self.logger.debug("A/V device error: {} - {}".format(self._name, event))
+        self.logger.error("A/V device error: {} - {}".format(self._name, e))
+        if isinstance(e, EOFError):
+            if event.transition.source == "running":
+                self.stop_receiver_thread(socket_error=True)
+                self.disconnect()
+                self.reconnect()
+            elif event.transition.source == "connecting":
+                self.disconnect()
 
     """
     These methods are called by the state machine.
@@ -158,7 +178,7 @@ class AvReceiver(object):
     def start_receiver_thread(self):
         pass
 
-    def stop_receiver_thread(self):
+    def stop_receiver_thread(self, socket_error=False):
         pass
 
     def initialize_state(self):

@@ -5,35 +5,22 @@
         <editors/>
         <sts>
             <st id="ST" editor="bool"/>
-            <!-- Heartbeat -->
-            <st id="GV7" editor="I_HB"/>
-            <!-- Debug (Log) Mode -->
-            <st id="GV6" editor="I_DM"/>
             <!-- Version Major -->
             <st id="GV1" editor="I_FLOAT"/>
             <!-- Version Minor -->
             <st id="GV2" editor="I_FLOAT"/>
             <!-- Device Count -->
             <st id="GV3" editor="I_INTEGER"/>
-            <!-- shortpoll -->
-            <st id="GV4" editor="I_INTEGER"/>
-            <!-- longpoll -->
-            <st id="GV5" editor="I_INTEGER"/>
+            <!-- Heartbeat -->
+            <st id="GV4" editor="I_HB"/>
+            <!-- Debug (Log) Mode -->
+            <st id="GV5" editor="I_DM"/>
         </sts>
         <cmds>
-            <sends>
-                <cmd id="DON"/>
-                <cmd id="DOF"/>
-            </sends>
+            <sends/>
             <accepts>
                 <cmd id="SET_DM">
                     <p id="" editor="I_DM" init="GV6"/>
-                </cmd>
-                <cmd id="SET_SHORTPOLL">
-                    <p id="" editor="I_INTEGER" init="GV4"/>
-                </cmd>
-                <cmd id="SET_LONGPOLL">
-                    <p id="" editor="I_INTEGER" init="GV5"/>
                 </cmd>
                 <cmd id="DISCOVER"/>
                 <cmd id="REMOVE_NOTICES_ALL"/>
@@ -57,10 +44,7 @@
             <st id="GV5" editor="I_SOURCE"/>
         </sts>
         <cmds>
-            <sends>
-                <cmd id="DON"/>
-                <cmd id="DOF"/>
-            </sends>
+            <sends/>
             <accepts>
                 <cmd id="SET_POWER">
                     <p id="" editor="I_DM" init="GV2"/>
@@ -84,10 +68,7 @@
             <st id="GV5" editor="I_SOURCE"/>
         </sts>
         <cmds>
-            <sends>
-                <cmd id="DON"/>
-                <cmd id="DOF"/>
-            </sends>
+            <sends/>
             <accepts>
                 <cmd id="SET_POWER">
                     <p id="" editor="I_ON_OFF" init="GV2"/>

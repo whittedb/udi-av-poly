@@ -5,4 +5,4 @@ import polyinterface
 
 from .av_controller import AVController
 from .poly_av_device import PolyAVDevice
-from .poly_av_device import VSX1021Node
+from .vsx1021_node import VSX1021Node

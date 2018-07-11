@@ -3,7 +3,7 @@ import telnetlib
 import socket
 from threading import Thread
 from time import sleep
-from av_receivers.av_device import AvDevice
+from av_devices.av_device import AvDevice
 
 
 logger = logging.getLogger()

@@ -2,7 +2,7 @@ import logging
 from copy import deepcopy
 import polyinterface
 from av_funcs import get_server_data, get_profile_info
-from nodes.node_factory import build as NodeBuilder
+from nodes.node_factory import build as node_builder
 
 
 """
@@ -297,8 +297,8 @@ class AVController(polyinterface.Controller):
         :param port:
         :return:
         """
-        node = NodeBuilder(controller=self, primary=self.address, address=address,
-                           device_type=device_type, name=name, host=host, port=port)
+        node = node_builder(controller=self, primary=self.address, address=address,
+                            device_type=device_type, name=name, host=host, port=port)
         if node is not None:
             self.l_debug("discover", "Adding node: {}, Address: {}, Host: {}, Port: {}"
                          .format(node.name, node.address, node.host, node.port))
@@ -317,8 +317,8 @@ class AVController(polyinterface.Controller):
             data = self.get_custom_node_data(node["address"])
             LOGGER.debug("Building Node: address={}, type={}, name={}, host={}, port={}"
                          .format(node["address"], data["type"], data["name"], data["host"], data["port"]))
-            new_node = NodeBuilder(controller=self, primary=self.address, address=node["address"],
-                                   device_type=data["type"], name=data["name"], host=data["host"], port=data["port"])
+            new_node = node_builder(controller=self, primary=self.address, address=node["address"],
+                                    device_type=data["type"], name=data["name"], host=data["host"], port=data["port"])
 
             if new_node is not None:
                 self.l_debug("add_existing_devices", "Adding existing: {}, Address: {}, Host: {}, Port: {}"

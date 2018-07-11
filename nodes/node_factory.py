@@ -1,5 +1,5 @@
 import polyinterface
-from nodes.poly_av_device import VSX1021Node
+from .vsx1021_node import VSX1021Node
 
 LOGGER = polyinterface.LOGGER
 

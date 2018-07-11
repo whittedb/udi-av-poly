@@ -45,9 +45,7 @@ Once the config parameters are defined, restart the nodeserver and the new nodes
 connection to the device will be created.
 
 ### Installation
-
-1. Backup Your ISY in case of problems!
-   * Really, do the backup, please
+1. Backup Your ISY in case of problems!  **Really, do the backup, please**
 2. Go to the Polyglot Store in the UI and install A/VServer.
 3. Add A/VServer NodeServer in Polyglot
 4. Open Admin Console (if you already had it open, then close and re-open)

@@ -39,7 +39,7 @@ The included Pioneer VSX-1021 and Sony Bravia devices are available as examples
        
      x = a number from 0 - 9 (Only 10 devices supported)
        
-  2. Sony Bravia XBR-65X810C (possibly others) TV
+  2. Sony Bravia XBR-65X810C (possibly other Bravia series) TV
 
 Once the config parameters are defined, restart the nodeserver and the new nodes will be created in ISY and the
 connection to the device will be created.

@@ -7,7 +7,7 @@ import polyinterface
 LOGGER = polyinterface.LOGGER
 
 
-class PolyAVDevice(polyinterface.Node):
+class AVNode(polyinterface.Node):
     """
     This is the class that all the Nodes will be represented by.  You will add this to
     Polyglot/ISY with the controller.addNode method

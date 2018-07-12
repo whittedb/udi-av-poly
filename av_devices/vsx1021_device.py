@@ -1,7 +1,7 @@
 import logging
 import telnetlib
 import socket
-from threading import Thread
+from threading import Thread, Event, Timer
 from time import sleep
 from av_devices.av_device import AvDevice
 
@@ -13,7 +13,7 @@ def myround(x, prec=1, base=.5):
     return round(base * round(float(x) / base), prec)
 
 
-class VSX1021Client(AvDevice):
+class VSX1021Device(AvDevice):
     """ Telnet client to Pioneer VSX 1021 AVR """
     INPUTS = {
         "PHONO":        "00",
@@ -51,40 +51,37 @@ class VSX1021Client(AvDevice):
         self._ip = ip
         self._port = port
         self._tn = None
-        self._receiverThread = None
-        self._stopReceiver = False
+        self._listenerThread = None
+        self._stopListener = False
+        self._isAliveTimer = None
+        self._isAliveAck = Event()
         self._volDbScale = None
         self._vol100Scale = None
         self._sourceText = None
 
     def connect(self):
-        try:
-            self._tn = telnetlib.Telnet(self._ip, self._port)
-            return True
-        except socket.timeout as e:
-            self.logger.error("Error connecting to device")
-            self.connect_error(error=e)
+        self._tn = telnetlib.Telnet(self._ip, self._port, 10)
 
     def disconnect(self):
-        try:
-            if self._tn is not None:
-                self._tn.close()
-        except EOFError:
-            pass
+        if self._tn is not None:
+            self._tn.close()
 
-    def start_receiver_thread(self):
-        self._receiverThread = Thread(name="VSX1021 Receiver", target=self._receiver_start)
-        self._receiverThread.start()
+    def start_listener_thread(self):
+        self._listenerThread = Thread(name="VSX1021 Receiver", target=self._input_listener)
+        self._listenerThread.start()
 
-    def stop_receiver_thread(self, socket_error=False):
-        self.logger.debug("Stopping receiver thread")
-        self._stopReceiver = True
+    def stop_listener_thread(self, socket_error=False):
+        self.logger.debug("Stopping listener thread")
+        if self._listenerThread is not None:
+            self._cancel_heartbeat()
+            self._stopListener = True
 
-        # If we are not stopping due to a read error, then request some data to speed up the receiver thread shutdown
-        if not socket_error:
-            self._send("?P")
-        self._receiverThread.join()
-        self._receiverThread = None
+            # If we are not stopping due to a connection error, then request some data to speed up the receiver
+            # thread shutdown
+            if not socket_error:
+                self._send("?P")
+            self._listenerThread.join()
+            self._listenerThread = None
     
     def initialize_state(self):
         self.update_all_states()
@@ -96,7 +93,10 @@ class VSX1021Client(AvDevice):
 
         self._tn.read_eager()  # Cleanup any pending output.
         self.logger.debug("--> {}".format(command))
-        self._tn.write(command.encode("ascii"))
+        try:
+            self._tn.write(command.encode("ascii"))
+        except OSError as e:
+            self.handle_error(error=e)
 
     "Receive data"""
     def _receive(self):
@@ -116,27 +116,56 @@ class VSX1021Client(AvDevice):
         sleep(1)
 
     "Continually receive data. Entry point for async read thread."""
-    def _receiver_start(self):
+    def _input_listener(self):
         self.logger.debug("Starting receiver thread")
 
-        self._stopReceiver = False
-        while not self._stopReceiver:
+        self._stopListener = False
+
+        self._start_heartbeat()
+        while not self._stopListener:
             try:
+                # Short timeout so we don't hang the thread on shutdown
                 data_bytes = self._tn.read_until(b"\r\n", 5)
-                if data_bytes == b"" or self._stopReceiver:
+                if data_bytes == b"" or self._stopListener:
                     continue
 
+                self._cancel_heartbeat()
+                self._isAliveAck.set()
                 data = data_bytes.replace(b"\r\n", b"").decode("utf-8")
                 self.logger.debug("<-- {}".format(data))
 
                 self._update_states(data)
-            except socket.error as e:
+                self._start_heartbeat()
+            except (socket.error, socket.gaierror, EOFError) as e:
                 self.logger.debug("Socket error on read, {}".format(e))
-                self.read_error(error=e)
+                self._cancel_heartbeat()
+                self.handle_error(error=e)
+
+        self._cancel_heartbeat()
 
         self.logger.debug("Receiver thread exiting")
 
+    def _check_is_alive(self):
+        self._isAliveAck.clear()
+        self.update_power()
+        if not self._isAliveAck.wait(10):
+            self.handle_error(error=AvDevice.NotResponding())
+            self._start_heartbeat()
+
+    def _start_heartbeat(self):
+        if not self._stopListener:
+            self._isAliveTimer = Timer(10, self._check_is_alive)
+            self._isAliveTimer.start()
+
+    def _cancel_heartbeat(self):
+        if self._isAliveTimer is not None:
+            self._isAliveTimer.cancel()
+        self._isAliveTimer = None
+
     def _update_states(self, data):
+        for l in self.listeners:
+            l.on_responding()
+
         command = data[0:3]
         value = data[3:]
         if command == "PWR":

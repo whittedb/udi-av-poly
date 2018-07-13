@@ -6,14 +6,11 @@ from time import sleep
 from av_devices.av_device import AvDevice
 
 
-logger = logging.getLogger()
-
-
 def myround(x, prec=1, base=.5):
     return round(base * round(float(x) / base), prec)
 
 
-class VSX1021Device(AvDevice):
+class PioneerVSX1021Device(AvDevice):
     """ Telnet client to Pioneer VSX 1021 AVR """
     INPUTS = {
         "PHONO":        "00",
@@ -67,7 +64,7 @@ class VSX1021Device(AvDevice):
             self._tn.close()
 
     def start_listener_thread(self):
-        self._listenerThread = Thread(name="VSX1021 Receiver", target=self._input_listener)
+        self._listenerThread = Thread(name="Pioneer VSX1021 Receiver", target=self._input_listener)
         self._listenerThread.start()
 
     def stop_listener_thread(self, socket_error=False):

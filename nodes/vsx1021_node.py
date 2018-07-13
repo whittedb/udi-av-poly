@@ -1,7 +1,7 @@
 import polyinterface
 from .av_node import AVNode
 from av_devices.av_device import AvDevice
-from av_devices import VSX1021Device
+from av_devices import PioneerVSX1021Device
 
 
 LOGGER = polyinterface.LOGGER
@@ -16,7 +16,7 @@ class VSX1021Node(AVNode, AvDevice.Listener):
         self.commands.update(self.vsx1021_commands)
         self.drivers.extend(self.vsx1021_drivers)
         super().__init__(controller, primary, address, name)
-        self.client = VSX1021Device(self.TYPE + ":" + name, self.host, self.port, logger=LOGGER)
+        self.client = PioneerVSX1021Device(self.TYPE + ":" + name, self.host, self.port, logger=LOGGER)
         self.client.add_listener(self)
 
     def start(self):
@@ -41,7 +41,7 @@ class VSX1021Node(AVNode, AvDevice.Listener):
         self.client.set_volume_db(float(val))
 
     def set_source(self, val):
-        self.l_debug("set_volume", "CMD Source: {}".format(VSX1021Device.INVERTED_INPUTS[val]))
+        self.l_debug("set_source", "CMD Source: {}".format(PioneerVSX1021Device.INVERTED_INPUTS[str(val).zfill(2)]))
         self.client.set_source(val)
 
     def on_connected(self):
@@ -65,7 +65,7 @@ class VSX1021Node(AVNode, AvDevice.Listener):
         self.setDriver("GV3", 1 if mute_state else 0)
 
     def on_source(self, source):
-        self.l_debug("on_source", "{}".format(VSX1021Device.INVERTED_INPUTS[source]))
+        self.l_debug("on_source", "{}".format(PioneerVSX1021Device.INVERTED_INPUTS[source]))
         self.setDriver("GV5", source)
 
     def on_responding(self):

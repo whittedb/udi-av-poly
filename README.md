@@ -49,6 +49,10 @@ parameters, then you'll need to restart the nodeserver after they are defined.
 6. Add appropriate custom parameters for your device if the SSDP searach didn't find them (see How it works above)
 7. Restart the nodeserver if you added custom parameters
 
+If you add more A/V devices after initial install/setup, just turn them on and then click the 'Discover' button on the
+controller page to force an SSDP search.  If you have to add custom parameters, then a restart of the nodeserver
+will be required.
+
 ### Requirements
 1. [Polyglot V2](https://github.com/UniversalDevicesInc/polyglot-v2) >= 2.2.0
 2. This has only been tested with ISY 5.0.12 so it is not confirmed to work with any prior version.

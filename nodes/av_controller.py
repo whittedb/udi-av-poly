@@ -157,7 +157,6 @@ class AVController(polyinterface.Controller, NodeFactory.SsdpListener):
         """
         self.l_debug("longpoll", "Long Poll Called")
         self.heartbeat()
-        self._nodeFactory.ssdp_search()
 
     def heartbeat(self):
         if self.hb is None or self.hb == 0:

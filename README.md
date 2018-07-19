@@ -18,31 +18,27 @@ new devices is fairly easy.  To add support for a new device:
 
   1. Subclass AVDevice and override the indicated methods to implement the device client communication layer.
      The state machine will drive the calls to these methods when necessary.
-  2. Subclass the PolyAVDevice class, which is a superclass of the PolyGlot V2 Node.  The AVDevice class defines
+  2. Subclass the AVNode class, which is a superclass of the PolyGlot V2 Node.  The AVDevice class defines
      a Listener class that can be inherited by the new class to listen for events from the device client communication
      instances.
-  3. Add config parameter parsing and custom data implementations into the AVController class.  If all you need is
-     name, host and port, no changes should be necessary as long as the custom parameter parsing is not changed.
-  4. Update the node_factory to build the new node.
+  3. Add config parameter parsing and/or SSDP parsing to NodeFactory.get_params().
+  4. Update NodeFactory.on_ssdp_response() to build the new node.
   5. Update the node definitions, nls entries and editors as needed.
  
 The included Pioneer VSX-1021 and Sony Bravia devices are available as examples
 
 ### Supported Devices:
-  1. Pioneer VSX-1021 (possibly other VSX series) receiver
+  1. Pioneer VSX-1021 (possibly other VSX series, but use the VSX1021 custom parameter to define them) receiver
   
-     Required custom config parameters:
+     Custom config parameters:
      
-       * VSX1021_x_NAME = Whatever name you want the node called
-       * VSX1021_x_HOST = Host IP of the receiver
-       * VSX1021_X_PORT = Port to connect to on the receiver
-       
-     x = a number from 0 - 9 (Only 10 devices supported)
+       * VSX1021xxxx = Host IP and port of receiver, i.e. 192.168.1.52:23
        
   2. Sony Bravia XBR-65X810C (possibly other Bravia series) TV
 
-Once the config parameters are defined, restart the nodeserver and the new nodes will be created in ISY and the
-connection to the device will be created.
+SSDP will search the network for your devices (the devices should be on.  If they are off, then they might be missed).
+If SSDP doesn't find your devices, then you can define custom parameters for it as indicated.  If defining custom
+parameters, then you'll need to restart the nodeserver after they are defined.
 
 ### Installation
 1. Backup Your ISY in case of problems!  **Really, do the backup, please**
@@ -50,8 +46,8 @@ connection to the device will be created.
 3. Add A/VServer NodeServer in Polyglot
 4. Open Admin Console (if you already had it open, then close and re-open)
 5. You should now have a node called AV Controller
-6. Add appropriate keys for your device (see How it works above)
-7. Restart the nodeserver
+6. Add appropriate custom parameters for your device if the SSDP searach didn't find them (see How it works above)
+7. Restart the nodeserver if you added custom parameters
 
 ### Requirements
 1. [Polyglot V2](https://github.com/UniversalDevicesInc/polyglot-v2) >= 2.2.0

@@ -61,7 +61,7 @@ class AVController(polyinterface.Controller, NodeFactory.SsdpListener):
         super().__init__(polyglot)
         self.name = "AV Controller"
         self.primary = self.address
-        self._nodeFactory = NodeFactory(self, self.address, self)
+        self._nodeFactory = NodeFactory(self, self)
 
     def start(self):
         """

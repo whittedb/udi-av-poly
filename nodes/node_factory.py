@@ -16,9 +16,9 @@ class NodeFactory(SSDP.Listener):
         def on_new_ssdp_node(self, node):
             pass
 
-    def __init__(self, controller, primary, ssdp_listener=None):
+    def __init__(self, controller, ssdp_listener=None):
         self._controller = controller
-        self._primary = primary
+        self._primary = controller.address
         self._ssdpListeners = []
         self._ssdp = SSDP(self)
 

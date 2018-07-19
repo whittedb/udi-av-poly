@@ -68,7 +68,7 @@ class PioneerVSX1021Device(AvDevice):
         self._listenerThread.start()
 
     def stop_listener_thread(self, socket_error=False):
-        self.logger.debug("Stopping listener thread")
+        self.logger.debug("Stopping VSX1021 listener thread")
         if self._listenerThread is not None:
             self._cancel_heartbeat()
             self._stopListener = True
@@ -114,7 +114,7 @@ class PioneerVSX1021Device(AvDevice):
 
     "Continually receive data. Entry point for async read thread."""
     def _input_listener(self):
-        self.logger.debug("Starting receiver thread")
+        self.logger.debug("Starting VSX1021 listener thread")
 
         self._stopListener = False
 
@@ -140,7 +140,7 @@ class PioneerVSX1021Device(AvDevice):
 
         self._cancel_heartbeat()
 
-        self.logger.debug("Receiver thread exiting")
+        self.logger.debug("VSX1021 listener thread exiting")
 
     def _check_is_alive(self):
         self._isAliveAck.clear()

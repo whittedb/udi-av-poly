@@ -41,7 +41,6 @@ class AVNode(polyinterface.Node):
         :param name: This nodes name
         """
 
-        LOGGER.debug("AVDevice:__init__: address={} name={} type={}".format(address, name, self.TYPE))
         self.id = self.TYPE
         super().__init__(controller, primary, address, name)
 

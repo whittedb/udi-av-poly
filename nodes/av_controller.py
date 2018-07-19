@@ -2,8 +2,7 @@ import logging
 from copy import deepcopy
 import polyinterface
 from av_funcs import get_server_data, get_profile_info
-from nodes.node_factory import build as node_builder
-
+from nodes.node_factory import NodeFactory
 
 """
 polyinterface has a LOGGER that is created by default and logs to:
@@ -17,12 +16,7 @@ DEFAULT_LONG_POLL = 30
 DEFAULT_DEBUG_MODE = 0
 
 
-SUPPORTED_DEVICES = [
-    "VSX1021"
-]
-
-
-class AVController(polyinterface.Controller):
+class AVController(polyinterface.Controller, NodeFactory.SsdpListener):
     """
     The Controller Class is the primary node from an ISY perspective. It is a Superclass
     of polyinterface.Node so all methods from polyinterface.Node are available to this
@@ -58,8 +52,8 @@ class AVController(polyinterface.Controller):
         to override the __init__ method, but if you do, you MUST call super.
         """
         self.ready = False
-        self.serverdata = get_server_data(LOGGER)
-        self.l_info("init", "Initializing A/V NodeServer version %s" % str(self.serverdata["version"]))
+        self.serverData = get_server_data(LOGGER)
+        self.l_info("init", "Initializing A/V NodeServer version %s" % str(self.serverData["version"]))
         self.hb = 0
         self.profile_info = None
         self.update_profile = False
@@ -67,6 +61,7 @@ class AVController(polyinterface.Controller):
         super().__init__(polyglot)
         self.name = "AV Controller"
         self.primary = self.address
+        self._nodeFactory = NodeFactory(self, self.address, self)
 
     def start(self):
         """
@@ -77,114 +72,30 @@ class AVController(polyinterface.Controller):
         this is where you should start. No need to Super this method, the parent
         version does nothing.
         """
-        self.l_info("init", "Starting A/V NodeServer version %s" % str(self.serverdata["version"]))
+        self.l_info("init", "Starting A/V NodeServer version %s" % str(self.serverData["version"]))
+        self._nodeFactory.start_ssdp_listener()
         self.check_profile()
-        self.discover()
 
-        device_nodes = self.get_device_nodes()
-        self.set_device_count(len(device_nodes))
-        self.setDriver("GV1", self.serverdata["version_major"])
-        self.setDriver("GV2", self.serverdata["version_minor"])
+        self.setDriver("GV1", self.serverData["version_major"])
+        self.setDriver("GV2", self.serverData["version_minor"])
         self.setDriver("GV6", self.debug_mode)
 
         self.setDriver("ST", 1)
         self.reportDrivers()
 
-    def load_params(self):
-        """
-        Load device info for node creation from customParams.  Requires several keys to define a device node, i.e:
-            VSX1021_0_HOST = 192.168.1.1
-            VSX1021_0_PORT = 23
-            VSX1021_1_HOST = 192.168.1.2
-            VSX1021_1_PORT = 23
-            ... up to 9
+        self.discover()
 
-        Misc keys:
-            debugMode:
-                0, 10, 20, 30, 40, 50 (All, Debug, Info, Warning, Error, Critical)
-        """
-
-        v = self.getCustomParam("debugMode")
-        if v is None:
-            self.addCustomParam({"debugMode": self.debug_mode})
-        else:
-            self.debug_mode = v
-
-        self.l_info("load_params", "{} devices supported".format(len(SUPPORTED_DEVICES)))
-        devices = {}
-        for device_type in SUPPORTED_DEVICES:
-            for i in range(0, 9):
-                device = "{}_{}".format(device_type, i)
-
-                name = self.getCustomParam(device + "_NAME")
-                host = self.getCustomParam(device + "_HOST")
-                port = self.getCustomParam(device + "_PORT")
-                if name is None and host is None and port is None:
-                    continue
-
-                # If only some of the info is specified, report it and continue
-                if name is None:
-                    self.l_error("load_params", device + "_NAME key missing: ignoring")
-                if host is None:
-                    self.l_error("load_params", device + "_HOST key missing: ignoring")
-                if port is None:
-                    self.l_error("load_params", device + "_PORT key missing: ignoring")
-                if name is None or host is None or port is None:
-                    continue
-
-                sv = host.split(".")
-                if len(sv) != 4:
-                    self.l_error("load_params", "Invalid host IP")
-                    continue
-
-                suffix = "_{}{}{}".format(i, sv[3].zfill(3), port)
-                prefix = device_type[0:14-len(suffix)]
-                address = prefix.lower() + suffix
-                device = {
-                    address: {
-                        "type": device_type,
-                        "name": name,
-                        "address": address,
-                        "host": host,
-                        "port": port
-                    }
-                }
-
-                devices.update(device)
-                self.l_debug("load_params", "Param Node: {}, Address: {}, Host: {}, Port: {}"
-                             .format(device_type, address, device[address]["host"], device[address]["port"]))
-
-        for d_k, d_v in devices.items():
-            self.l_debug("load_params", "{}: Address: {}, Host: {}, Port: {}"
-                         .format(d_v["type"], d_k, d_v["host"], d_v["port"]))
-
-        return devices
-
-    def discover(self, *args, **kwargs):
+    def discover(self):
         """
         Example
         Do discovery here. Does not have to be called discovery. Called from example
         controller start method and from DISCOVER command received from ISY as an exmaple.
         """
         self.add_config_devices()
-        param_devices = self.load_params()
+        param_devices = self._nodeFactory.load_params()
         device_nodes = self.get_device_nodes()
         self.l_debug("discover", "Parameter Device Count = {}".format(len(param_devices)))
         self.l_debug("discover", "Existing Node Count = {}".format(len(device_nodes)))
-
-        # Remove nodes not fully defined in custom parameters
-        for address, node in device_nodes.items():
-            self.l_debug("discover", "Checking: " + address)
-            sv = address.split("_")
-            device_prefix = "{}_{}".format(node.TYPE, sv[1][0:1])
-            name = self.getCustomParam(device_prefix + "_NAME")
-            host = self.getCustomParam(device_prefix + "_HOST")
-            port = self.getCustomParam(device_prefix + "_PORT")
-            if name is None or host is None or port is None:
-                self.l_info("discover",
-                            "Removing node with missing custom params: {}, Name: {}, Address:{}, Host: {}, Port: {}"
-                            .format(node.TYPE, node.name, node.address, node.host, node.port))
-                self.delete_node(address)
 
         # Add missing nodes
         for k, v in param_devices.items():
@@ -192,6 +103,15 @@ class AVController(polyinterface.Controller):
                 self.add_node(address=k, device_type=v["type"], name=v["name"], host=v["host"], port=v["port"])
 
         self.set_device_count(len(self.get_device_nodes()))
+
+        self._nodeFactory.ssdp_search()
+
+    def on_new_ssdp_node(self, node):
+        if node.address not in self.nodes:
+            self.l_debug("on_new_ssdp_node", "Adding new node")
+            self.l_debug("on_new_ssdp_node", node)
+            self.addNode(node)
+            self.set_device_count(len(self.get_device_nodes()))
 
     def add_config_devices(self):
         """
@@ -231,11 +151,13 @@ class AVController(polyinterface.Controller):
     def longPoll(self):
         """
         Optional.
-        This runs every 30 seconds. You would probably update your nodes either here
+        This runs every 60 seconds. You would probably update your nodes either here
         or shortPoll. No need to Super this method the parent version does nothing.
         The timer can be overridden in the server.json.
         """
+        self.l_debug("longpoll", "Long Poll Called")
         self.heartbeat()
+        self._nodeFactory.ssdp_search()
 
     def heartbeat(self):
         if self.hb is None or self.hb == 0:
@@ -265,6 +187,7 @@ class AVController(polyinterface.Controller):
     def stop(self):
         for n in self.get_device_nodes().values():
             n.stop()
+        self._nodeFactory.shutdown_ssdp_listener()
 
         LOGGER.debug("A/V NodeServer stopped.")
 
@@ -297,12 +220,10 @@ class AVController(polyinterface.Controller):
         :param port:
         :return:
         """
-        node = node_builder(controller=self, primary=self.address, address=address,
-                            device_type=device_type, name=name, host=host, port=port)
+        node = self._nodeFactory.build(address=address, device_type=device_type, name=name, host=host, port=port)
         if node is not None:
-            self.l_debug("discover", "Adding node: {}, Address: {}, Host: {}, Port: {}"
+            self.l_debug("add_node", "Adding node: {}, Address: {}, Host: {}, Port: {}"
                          .format(node.name, node.address, node.host, node.port))
-            self.update_custom_node_data(node)
             self.addNode(node)
 
         return node
@@ -313,30 +234,35 @@ class AVController(polyinterface.Controller):
         :param node:
         :return:
         """
-        try:
-            data = self.get_custom_node_data(node["address"])
-            LOGGER.debug("Building Node: address={}, type={}, name={}, host={}, port={}"
-                         .format(node["address"], data["type"], data["name"], data["host"], data["port"]))
-            new_node = node_builder(controller=self, primary=self.address, address=node["address"],
-                                    device_type=data["type"], name=data["name"], host=data["host"], port=data["port"])
+        self.l_debug("add_config_node", node)
 
-            if new_node is not None:
-                self.l_debug("add_existing_devices", "Adding existing: {}, Address: {}, Host: {}, Port: {}"
-                             .format(new_node.name, new_node.address, new_node.host, new_node.port))
-                self.addNode(new_node)
-                self.update_custom_node_data(new_node)
-        except KeyError:
-            # Delete if no custom data for this node
-            self.l_debug("add_existing_devices",
-                         "Removing existing node with no data: {}, Address: {}".format(node["name"], node["address"]))
-            self.delNode(node["address"])
+        address = node["address"]
+        host = "{:d}.{:d}.{:d}.{:d}".format(
+                self.hextoint(address[0:2]), self.hextoint(address[2:4]),
+                self.hextoint(address[4:6]), self.hextoint(address[6:8]))
+        port = "{:d}".format(self.hextoint(address[-4:]))
+        LOGGER.debug("Building Node: address={}, type={}, name={}, host={}, port={}".format(
+                address, node["node_def_id"], node["name"], host, port))
+        new_node = self._nodeFactory.build(
+                address=address, device_type=node["node_def_id"], name=node["name"], host=host, port=port)
+
+        if new_node is not None:
+            self.l_debug("add_existing_devices", "Adding existing: {}, Address: {}, Host: {}, Port: {}"
+                         .format(new_node.name, new_node.address, new_node.host, new_node.port))
+            self.addNode(new_node)
+
+    @staticmethod
+    def hextoint(s):
+        return int(s, 16)
 
     def delete_node(self, address):
-        cd = self.polyConfig["customData"]["node_data"]
+        cd = deepcopy(self.polyConfig["customData"])
 
-        self.delNode(address)
-        cd.pop(address)
+        LOGGER.debug(cd)
+        cd["node_data"].pop(address)
         self.saveCustomData(cd)
+        LOGGER.debug(cd)
+        self.delNode(address)
 
     def update_custom_node_data(self, node):
         cd = deepcopy(self.polyConfig["customData"])
@@ -431,91 +357,3 @@ class AVController(polyinterface.Controller):
         {"driver": "GV4", "value": 0, "uom": 25},   # heartbeat
         {"driver": "GV5", "value": DEFAULT_DEBUG_MODE, "uom": 25}    # Debug (Log) Mode
     ]
-
-
-class MyNode(polyinterface.Node):
-    """
-    This is the class that all the Nodes will be represented by. You will add this to
-    Polyglot/ISY with the controller.addNode method.
-
-    Class Variables:
-    self.primary: String address of the Controller node.
-    self.parent: Easy access to the Controller Class from the node itself.
-    self.address: String address of this Node 14 character limit. (ISY limitation)
-    self.added: Boolean Confirmed added to ISY
-
-    Class Methods:
-    start(): This method is called once polyglot confirms the node is added to ISY.
-    setDriver('ST', 1, report = True, force = False):
-        This sets the driver 'ST' to 1. If report is False we do not report it to
-        Polyglot/ISY. If force is True, we send a report even if the value hasn't changed.
-    reportDrivers(): Forces a full update of all drivers to Polyglot/ISY.
-    query(): Called when ISY sends a query request to Polyglot for this specific node
-    """
-    def __init__(self, controller, primary, address, name):
-        """
-        Optional.
-        Super runs all the parent class necessities. You do NOT have
-        to override the __init__ method, but if you do, you MUST call super.
-
-        :param controller: Reference to the Controller class
-        :param primary: Controller address
-        :param address: This nodes address
-        :param name: This nodes name
-        """
-        super(MyNode, self).__init__(controller, primary, address, name)
-
-    def start(self):
-        """
-        Optional.
-        This method is run once the Node is successfully added to the ISY
-        and we get a return result from Polyglot. Only happens once.
-        """
-        self.setDriver('ST', 1)
-        pass
-
-    def set_on(self, command):
-        """
-        Example command received from ISY.
-        Set DON on MyNode.
-        Sets the ST (status) driver to 1 or 'True'
-        """
-        self.setDriver('ST', 1)
-
-    def set_off(self, command):
-        """
-        Example command received from ISY.
-        Set DOF on MyNode
-        Sets the ST (status) driver to 0 or 'False'
-        """
-        self.setDriver('ST', 0)
-
-    def query(self):
-        """
-        Called by ISY to report all drivers for this node. This is done in
-        the parent class, so you don't need to override this method unless
-        there is a need.
-        """
-        self.reportDrivers()
-
-    drivers = [{'driver': 'ST', 'value': 0, 'uom': 2}]
-    """
-    Optional.
-    This is an array of dictionary items containing the variable names(drivers)
-    values and uoms(units of measure) from ISY. This is how ISY knows what kind
-    of variable to display. Check the UOM's in the WSDK for a complete list.
-    UOM 2 is boolean so the ISY will display 'True/False'
-    """
-    id = "mynodetype"
-    """
-    id of the node from the nodedefs.xml that is in the profile.zip. This tells
-    the ISY what fields and commands this node has.
-    """
-    commands = {
-        "DON": set_on,
-        "DOF": set_off
-    }
-    """
-    This is a dictionary of commands. If ISY sends a command to the NodeServer,
-    this tells it which method to call. DON calls set_on, etc.
-    """

@@ -85,19 +85,20 @@ class AVController(polyinterface.Controller, NodeFactory.SsdpListener):
 
         self.discover()
 
-    def discover(self):
+    def discover(self, *args, **kwargs):
         """
         Example
         Do discovery here. Does not have to be called discovery. Called from example
         controller start method and from DISCOVER command received from ISY as an exmaple.
         """
-        self.add_config_devices()
-        param_devices = self._nodeFactory.load_params()
-        device_nodes = self.get_device_nodes()
-        self.l_debug("discover", "Parameter Device Count = {}".format(len(param_devices)))
-        self.l_debug("discover", "Existing Node Count = {}".format(len(device_nodes)))
+        if not self.ready:
+            self.add_config_devices()
+            device_nodes = self.get_device_nodes()
+            self.l_debug("discover", "Existing Node Count = {}".format(len(device_nodes)))
 
         # Add missing nodes
+        param_devices = self._nodeFactory.load_params()
+        self.l_debug("discover", "Parameter Device Count = {}".format(len(param_devices)))
         for k, v in param_devices.items():
             if k not in self.nodes:
                 self.add_node(address=k, device_type=v["type"], name=v["name"], host=v["host"], port=v["port"])
@@ -105,6 +106,7 @@ class AVController(polyinterface.Controller, NodeFactory.SsdpListener):
         self.set_device_count(len(self.get_device_nodes()))
 
         self._nodeFactory.ssdp_search()
+        self.ready = True
 
     def on_new_ssdp_node(self, node):
         if node.address not in self.nodes:
@@ -120,7 +122,8 @@ class AVController(polyinterface.Controller, NodeFactory.SsdpListener):
         config_nodes = self.get_config_nodes()
         self.l_debug("add_config_devices", "{} existing nodes to add".format(len(config_nodes)))
         for node in config_nodes.values():
-            self.add_config_node(node)
+            if node["address"] not in self.nodes:
+                self.add_config_node(node)
 
     def check_profile(self):
         self.profile_info = get_profile_info(LOGGER)
@@ -195,8 +198,8 @@ class AVController(polyinterface.Controller, NodeFactory.SsdpListener):
         # Remove all existing notices
         self.removeNoticesAll()
 
-    def update_profile(self, command):
-        LOGGER.info("update_profile:")
+    def cmd_install_profile(self, command):
+        LOGGER.info("cmd_install_profile:")
         st = self.poly.installprofile()
         return st
 
@@ -233,8 +236,6 @@ class AVController(polyinterface.Controller, NodeFactory.SsdpListener):
         :param node:
         :return:
         """
-        self.l_debug("add_config_node", node)
-
         address = node["address"]
         host = "{:d}.{:d}.{:d}.{:d}".format(
                 self.hextoint(address[0:2]), self.hextoint(address[2:4]),
@@ -345,7 +346,7 @@ class AVController(polyinterface.Controller, NodeFactory.SsdpListener):
     commands = {
         "SET_DM": cmd_set_debug_mode,
         "DISCOVER": discover,
-        "UPDATE_PROFILE": update_profile,
+        "UPDATE_PROFILE": cmd_install_profile,
         "REMOVE_NOTICES_ALL": remove_notices_all
     }
     drivers = [

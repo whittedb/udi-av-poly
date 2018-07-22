@@ -34,7 +34,9 @@ The included Pioneer VSX-1021 and Sony Bravia devices are available as examples
      
        * VSX1021xxxx = Host IP and port of receiver, i.e. 192.168.1.52:23
        
-  2. Sony Bravia XBR-65X810C (possibly other Bravia series) TV
+  2. Sony Bravia XBR-65X810C (possibly other Bravia series, but use the BRAVIA customer parameter to define them ) TV.  
+  Be sure to have Simple IP Control turned on in your network settings on the TV.
+       * BRAVIAxxxx = Host IP and port of receiver, i.e. 192.168.1.51:20060
 
 SSDP will search the network for your devices (the devices should be on.  If they are off, then they might be missed).
 If SSDP doesn't find your devices, then you can define custom parameters for it as indicated.  If defining custom

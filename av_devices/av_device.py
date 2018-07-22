@@ -66,6 +66,10 @@ class AvDevice(object):
         def on_not_responding(self):
             pass
 
+    class Error(Exception):
+        def __init__(self, msg):
+            super().__init__(msg)
+
     class NotResponding(Exception):
         def __init__(self):
             super().__init__("Device not responding")

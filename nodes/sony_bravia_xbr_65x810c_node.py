@@ -1,28 +1,28 @@
 import polyinterface
 from .av_node import AVNode
 from av_devices.av_device import AvDevice
-from av_devices import PioneerVSX1021Device
+from av_devices import SonyBraviaXBR65X810CDevice
 
 
 LOGGER = polyinterface.LOGGER
 
 
-class VSX1021Node(AVNode, AvDevice.Listener):
-    TYPE = "VSX1021"
+class SonyBraviaXBR65X810CNode(AVNode, AvDevice.Listener):
+    TYPE = "BRAVIA"
 
     def __init__(self, controller, primary, host, port, address=None, name=None):
         self.host = host
         self.port = port
-        self.commands.update(self.vsx1021_commands)
-        self.drivers.extend(self.vsx1021_drivers)
+        self.commands.update(self.bravia_commands)
+        self.drivers.extend(self.bravia_drivers)
         super().__init__(controller, primary, address, name)
-        self.client = PioneerVSX1021Device(self.TYPE + ":" + name, self.host, self.port, logger=LOGGER)
+        self.client = SonyBraviaXBR65X810CDevice(self.TYPE + ":" + name, self.host, self.port, logger=LOGGER)
         self.client.add_listener(self)
 
     def start(self):
         self.client.start()
         self.client.wait_for_startup()
-        self.setDriver("GV1", 1)
+        self.setDriver("GV1", 2)
         self.reportDrivers()
 
     def stop(self):
@@ -33,16 +33,28 @@ class VSX1021Node(AVNode, AvDevice.Listener):
         self.l_debug("set_power", "CMD Power: {}".format("True" if val else "False"))
         self.client.set_power(val == 1)
 
+    def on_responding(self):
+        self.setDriver("ST", 1)
+        # self.reportDrivers()
+
+    def on_not_responding(self):
+        self.setDriver("ST", 0)
+        # self.reportDrivers()
+
     def set_mute(self, val):
         self.l_debug("set_mute", "CMD Mute: {}".format("True" if val else "False"))
         self.client.set_mute(val == 1)
 
     def set_volume(self, val):
         self.l_debug("set_volume", "CMD Volume: {}".format(val))
-        self.client.set_volume_db(float(val))
+        self.client.set_volume(val)
 
     def set_source(self, val):
-        self.l_debug("set_source", "CMD Source: {}".format(PioneerVSX1021Device.INVERTED_INPUTS[str(val).zfill(2)]))
+        try:
+            self.l_debug("set_source", "CMD Source: {}".format(
+                    SonyBraviaXBR65X810CDevice.INVERTED_INPUTS[str(val).zfill(2)]))
+        except KeyError:
+            pass
         self.client.set_source(val)
 
     def on_connected(self):
@@ -59,23 +71,19 @@ class VSX1021Node(AVNode, AvDevice.Listener):
 
     def on_volume(self, volume):
         self.l_debug("on_volume", "{}".format(volume))
-        self.setDriver("GV4", self.client.volume_db)
+        self.setDriver("GV4", self.client.volume)
 
     def on_mute(self, mute_state):
         self.l_debug("on_mute", "{}".format("True" if mute_state else "False"))
         self.setDriver("GV3", 1 if mute_state else 0)
 
     def on_source(self, source):
-        self.l_debug("on_source", "{}".format(PioneerVSX1021Device.INVERTED_INPUTS[source]))
+        source = int(source)
+        try:
+            self.l_debug("on_source", "{}".format(SonyBraviaXBR65X810CDevice.INVERTED_INPUTS[source]))
+        except KeyError:
+            pass
         self.setDriver("GV5", source)
-
-    def on_responding(self):
-        self.setDriver("ST", 1)
-        # self.reportDrivers()
-
-    def on_not_responding(self):
-        self.setDriver("ST", 0)
-        # self.reportDrivers()
 
     """
     Command Functions
@@ -112,12 +120,12 @@ class VSX1021Node(AVNode, AvDevice.Listener):
     def l_debug(self, name, string):
         LOGGER.debug("%s:%s: %s" % (self.id, name, string))
 
-    vsx1021_commands = {
+    bravia_commands = {
         "SET_POWER": cmd_set_power,
         "SET_MUTE": cmd_set_mute,
         "SET_VOLUME": cmd_set_volume,
         "SET_SOURCE": cmd_set_source
     }
 
-    vsx1021_drivers = [
+    bravia_drivers = [
     ]

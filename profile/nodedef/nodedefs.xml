@@ -63,7 +63,7 @@
             <!-- Mute -->
             <st id="GV3" editor="I_ON_OFF"/>
             <!-- Volume -->
-            <st id="GV4" editor="I_DB_VOLUME"/>
+            <st id="GV4" editor="I_VSX1021_DB_VOLUME"/>
             <!-- Input Source -->
             <st id="GV5" editor="I_SOURCE"/>
         </sts>
@@ -77,10 +77,44 @@
                     <p id="" editor="I_ON_OFF" init="GV3"/>
                 </cmd>
                 <cmd id="SET_VOLUME">
-                    <p id="" editor="I_DB_VOLUME" init="GV4"/>
+                    <p id="" editor="I_VSX1021_DB_VOLUME" init="GV4"/>
                 </cmd>
                 <cmd id="SET_SOURCE">
-                    <p id="" editor="I_SOURCE" init="GV5"/>
+                    <p id="" editor="I_VSX1021_SOURCE" init="GV5"/>
+                </cmd>
+            </accepts>
+        </cmds>
+    </nodeDef>
+
+    <nodeDef id="BRAVIA" nls="bravia">
+        <editors/>
+        <sts>
+            <st id="ST" editor="bool"/>
+            <!-- Device Type -->
+            <st id="GV1" editor="I_DEVICE_TYPE"/>
+            <!-- Power -->
+            <st id="GV2" editor="I_ON_OFF"/>
+            <!-- Mute -->
+            <st id="GV3" editor="I_ON_OFF"/>
+            <!-- Volume -->
+            <st id="GV4" editor="I_VOLUME"/>
+            <!-- Input Source -->
+            <st id="GV5" editor="I_BRAVIA_SOURCE"/>
+        </sts>
+        <cmds>
+            <sends/>
+            <accepts>
+                <cmd id="SET_POWER">
+                    <p id="" editor="I_ON_OFF" init="GV2"/>
+                </cmd>
+                <cmd id="SET_MUTE">
+                    <p id="" editor="I_ON_OFF" init="GV3"/>
+                </cmd>
+                <cmd id="SET_VOLUME">
+                    <p id="" editor="I_VOLUME" init="GV4"/>
+                </cmd>
+                <cmd id="SET_SOURCE">
+                    <p id="" editor="I_BRAVIA_SOURCE" init="GV5"/>
                 </cmd>
             </accepts>
         </cmds>

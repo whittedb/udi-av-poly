@@ -68,7 +68,7 @@ class PioneerVSX1021Device(AvDevice):
         self._listenerThread.start()
 
     def stop_listener_thread(self, socket_error=False):
-        self.logger.debug("Stopping VSX1021 listener thread")
+        self.logger.debug("VSX1021: Stopping listener thread")
         if self._listenerThread is not None:
             self._cancel_heartbeat()
             self._stopListener = True
@@ -89,7 +89,7 @@ class PioneerVSX1021Device(AvDevice):
         command = cmd + '\r'
 
         self._tn.read_eager()  # Cleanup any pending output.
-        self.logger.debug("--> {}".format(command))
+        self.logger.debug("VSX1021: --> {}".format(command))
         try:
             self._tn.write(command.encode("ascii"))
         except OSError as e:
@@ -98,7 +98,7 @@ class PioneerVSX1021Device(AvDevice):
     "Receive data"""
     def _receive(self):
         data = self._tn.read_eager().replace(b"\r\n", b"").decode("utf-8")
-        self.logger.debug("<-- {}".format(data))
+        self.logger.debug("VSX1021: <-- {}".format(data))
         return data
 
     "Send a command and receive the response"""
@@ -114,7 +114,7 @@ class PioneerVSX1021Device(AvDevice):
 
     "Continually receive data. Entry point for async read thread."""
     def _input_listener(self):
-        self.logger.debug("Starting VSX1021 listener thread")
+        self.logger.debug("VSX1021: Starting listener thread")
 
         self._stopListener = False
 
@@ -129,12 +129,12 @@ class PioneerVSX1021Device(AvDevice):
                 self._cancel_heartbeat()
                 self._isAliveAck.set()
                 data = data_bytes.replace(b"\r\n", b"").decode("utf-8")
-                self.logger.debug("<-- {}".format(data))
+                self.logger.debug("VSX1021: <-- {}".format(data))
 
                 self._update_states(data)
                 self._start_heartbeat()
             except (socket.error, socket.gaierror, EOFError) as e:
-                self.logger.debug("Socket error on read, {}".format(e))
+                self.logger.debug("VSX1021: Socket error on read, {}".format(e))
                 self._cancel_heartbeat()
                 self.handle_error(error=e)
 
@@ -175,11 +175,11 @@ class PioneerVSX1021Device(AvDevice):
         if command == "MUT":
             super().set_mute(value == "0")
         if command == "E04":
-            self.logger.warn("COMMAND ERROR")
+            self.logger.warn("VSX1021: COMMAND ERROR")
         if command == "E06":
-            self.logger.warn("PARAMETER ERROR")
+            self.logger.warn("VSX1021: PARAMETER ERROR")
         if command == "B00":
-            self.logger.warn("RECEIVER BUSY")
+            self.logger.warn("VSX1021: RECEIVER BUSY")
 
         command = data[0:2]
         if command == "FN":
@@ -253,14 +253,14 @@ class PioneerVSX1021Device(AvDevice):
     def set_volume_db(self, volume):
         scaled_volume = int(round((volume * 2) + 161, 0))
         formatted = "{}VL".format(str(scaled_volume).zfill(3))
-        self.logger.debug("Volume: {}, Scaled: {}, Formatted: {}".format(volume, scaled_volume, formatted))
+        self.logger.debug("VSX1021: Volume: {}, Scaled: {}, Formatted: {}".format(volume, scaled_volume, formatted))
         self._send(formatted)
 
     "Set volume to specific value on 0-100 scale"""
     def set_volume100(self, volume):
         scaled_volume = int(myround(volume * 1.85, 0, 1))
         formatted = "{}VL".format(str(scaled_volume).zfill(3))
-        self.logger.debug("Volume: {}, Scaled: {}, Formatted: {}".format(volume, scaled_volume, formatted))
+        self.logger.debug("VSX1021: Volume: {}, Scaled: {}, Formatted: {}".format(volume, scaled_volume, formatted))
         self._send(formatted)
 
     "Mute/Unmute sound"""

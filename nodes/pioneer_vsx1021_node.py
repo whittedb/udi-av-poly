@@ -7,7 +7,7 @@ from av_devices import PioneerVSX1021Device
 LOGGER = polyinterface.LOGGER
 
 
-class VSX1021Node(AVNode, AvDevice.Listener):
+class PioneerVSX1021Node(AVNode, AvDevice.Listener):
     TYPE = "VSX1021"
 
     def __init__(self, controller, primary, host, port, address=None, name=None):

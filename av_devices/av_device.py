@@ -215,6 +215,10 @@ class AvDevice(object):
     def initialize_state(self):
         pass
 
+    @property
+    def name(self):
+        return self._name
+
     # Override these in sub classes for specific behavior
     @property
     def power(self):

@@ -63,9 +63,9 @@
             <!-- Mute -->
             <st id="GV3" editor="I_ON_OFF"/>
             <!-- Volume -->
-            <st id="GV4" editor="I_VSX1021_DB_VOLUME"/>
+            <st id="GV4" editor="I_VSX1021_DB_VOLUME_FLOAT"/>
             <!-- Input Source -->
-            <st id="GV5" editor="I_SOURCE"/>
+            <st id="GV5" editor="I_VSX1021_SOURCE"/>
         </sts>
         <cmds>
             <sends/>
@@ -77,7 +77,7 @@
                     <p id="" editor="I_ON_OFF" init="GV3"/>
                 </cmd>
                 <cmd id="SET_VOLUME">
-                    <p id="" editor="I_VSX1021_DB_VOLUME" init="GV4"/>
+                    <p id="" editor="I_VSX1021_DB_VOLUME_LIST" init="GV4"/>
                 </cmd>
                 <cmd id="SET_SOURCE">
                     <p id="" editor="I_VSX1021_SOURCE" init="GV5"/>

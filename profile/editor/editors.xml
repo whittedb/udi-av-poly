@@ -32,8 +32,12 @@
         <range uom="56" min="0" max="100" step="1" prec="0"/>
     </editor>
 
-    <editor id="I_VSX1021_DB_VOLUME">
+    <editor id="I_VSX1021_DB_VOLUME_LIST">
         <range uom="13" min="-80" max="12" step=".5" prec="1"/>
+    </editor>
+
+    <editor id="I_VSX1021_DB_VOLUME_FLOAT">
+       <range uom="56" prec="1"/>
     </editor>
 
     <editor id="I_SOURCE">

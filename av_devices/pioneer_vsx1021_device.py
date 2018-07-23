@@ -169,7 +169,7 @@ class PioneerVSX1021Device(AvDevice):
             super().set_power(value == "0")
         if command == "VOL":
             vol = int(value)
-            self._volDbScale = (vol - 161) / 2
+            self._volDbScale = float(vol - 161) / 2
             self._vol100Scale = int(vol / 1.65)
             super().set_volume(vol)
         if command == "MUT":

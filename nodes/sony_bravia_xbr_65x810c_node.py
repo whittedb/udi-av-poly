@@ -29,6 +29,9 @@ class SonyBraviaXBR65X810CNode(AVNode, AvDevice.Listener):
         self.client.stop()
         self.reportDrivers()
 
+    def query(self):
+        self.client.query_device()
+
     def set_power(self, val):
         self.l_debug("set_power", "CMD Power: {}".format("True" if val else "False"))
         self.client.set_power(val == 1)
@@ -55,7 +58,7 @@ class SonyBraviaXBR65X810CNode(AVNode, AvDevice.Listener):
                     SonyBraviaXBR65X810CDevice.INVERTED_INPUTS[str(val).zfill(2)]))
         except KeyError:
             pass
-        self.client.set_source(val)
+        self.client.set_input(val)
 
     def on_connected(self):
         self.setDriver("ST", 1)

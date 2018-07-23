@@ -180,6 +180,16 @@ class Inputs(Enum):
         else:
             return cls.UNKNOWN
 
+    @classmethod
+    def get_by_value(cls, value):
+        if isinstance(value, str):
+            value = int(value)
+        for name, member in cls.__members__.items():
+            if member.value == value:
+                return member
+        else:
+            return cls.UNKNOWN
+
 
 class CommData(object):
     MSGLEN = 24
@@ -251,7 +261,8 @@ class CommData(object):
     def set_input(self, input_value):
         with self._lock:
             self.function = Functions.INPUT.value
-            self.parameter = Inputs[input_value].code
+            self.parameter = Inputs.get_by_value(input_value).code
+#            self.parameter = Inputs[int(input_value)].code
             return self
 
     def get_input(self):
@@ -352,7 +363,6 @@ class ClientHandler(asyncore.dispatcher):
             data = self._writeBuffer.pop()
         else:
             _, data = self._sendQ.get()
-            self._sendQ.task_done()
             # Need to stash this so we can check for a response in the reader
             self._waitForResponseQ.put(data)
             data = data.pack()
@@ -362,6 +372,8 @@ class ClientHandler(asyncore.dispatcher):
         if sent < len(data):
             remaining = data[sent:]
             self._writeBuffer.append(remaining)
+        else:
+            self._sendQ.task_done()
 
     def start(self):
         try:
@@ -377,7 +389,8 @@ class ClientHandler(asyncore.dispatcher):
 
     def send_command(self, data):
         self.logger.debug("Sony Bravia: Queueing Request: {}".format(data.pack()))
-        self._sendQ.put((time.time(), data))
+        qdata = (time.time(), data)
+        self._sendQ.put(qdata)
 
 
 class SonyBraviaXBR65X810CDevice(AvDevice, ClientHandler.Listener):
@@ -469,41 +482,35 @@ class SonyBraviaXBR65X810CDevice(AvDevice, ClientHandler.Listener):
             self.logger.error("Sony Bravia: Response not an Answer or Notify type")
             return
 
+        # Retrieve data that we sent
+        if comm.ctype == Type.ANSWER.value:
+            _, data_sent = self._sentQ.get()
+            self._sentQ.task_done()
+            # Ignore success responses from Control requests.  We'll get a notification with the change
+            if data_sent.ctype == Type.CONTROL.value and comm.parameter == Answer.SUCCESS.value:
+                return
+
         if comm.parameter == Answer.NOT_FOUND.value:
             self.logger.error("Sony Bravia: Response: Not Found")
             return
 
-        # Ignore success responses from non-Enquiry requests.  We'll get a notification with the change
-        _, data_sent = self._sentQ.get()
-        self._sentQ.task_done()
-        if data_sent.ctype == Type.CONTROL.value and comm.parameter == Answer.SUCCESS.value:
-            return
-
         command = comm.function
-        if command == Functions.POWER_STATUS.value:
-            if comm.parameter == Answer.ERROR.value:
+        if comm.ctype == Type.ANSWER.value and comm.parameter == Answer.ERROR.value:
+            if command is Functions.INPUT.value:
+                super().set_source(Inputs.UNKNOWN.value)
+            else:
                 self.logger.error("Sony Bravia: Response error recieved")
-                return
+
+        if command == Functions.POWER_STATUS.value:
             super().set_power(int(comm.parameter) == 1)
         elif command == Functions.MUTE.value:
-            if comm.parameter == Answer.ERROR.value:
-                self.logger.error("Sony Bravia: Response error recieved")
-                return
-            super().set_mute(int(comm.parameter) == 1)
+            super().set_mute(int(comm.parameter))
         elif command == Functions.VOLUME.value:
-            if comm.parameter == Answer.ERROR.value:
-                self.logger.error("Sony Bravia: Response error recieved")
-                return
             super().set_volume(int(comm.parameter))
         elif command == Functions.INPUT.value:
-            if comm.parameter == Answer.ERROR.value:
-                self.logger.error("Sony Bravia: Response error recieved")
-                v = Inputs.get_by_code(999)
-            else:
-                v = Inputs.get_by_code(comm.parameter)
-                if v is Inputs.UNKNOWN:
-                    self.logger.error("Sony Bravia: Returned unknown source value")
-                    return
+            v = Inputs.get_by_code(comm.parameter)
+            if v is Inputs.UNKNOWN:
+                self.logger.error("Sony Bravia: Returned unknown source value")
             super().set_source(v.value)
 
     """Sends single command to AV"""

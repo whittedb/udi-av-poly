@@ -5,7 +5,7 @@ import struct
 from queue import PriorityQueue, Queue
 import time
 from enum import unique, Enum
-from threading import Thread, Event, Lock
+from threading import Thread, Event, Condition, Lock
 from av_devices.av_device import AvDevice
 
 
@@ -281,8 +281,6 @@ class CommData(object):
 
 
 class ClientHandler(asyncore.dispatcher):
-    DEAD_THREAD = Thread()
-
     class Listener(object):
         def on_connection_handler_response(self, data):
             pass
@@ -294,10 +292,10 @@ class ClientHandler(asyncore.dispatcher):
             pass
 
     def __init__(self, host, port, logger, listener=None):
+        self._lock = Lock()
         self.logger = logger
         self._host = host
         self._port = port
-        self._connectionHandlerThread = self.DEAD_THREAD
         self._stopThread = Event()
         self._sendQ = PriorityQueue()
         self._waitForResponseQ = Queue()
@@ -305,17 +303,26 @@ class ClientHandler(asyncore.dispatcher):
         self._listeners = []
         if listener is not None:
             self._listeners.append(listener)
+        self._closed = False
         super().__init__()
 
     def add_listener(self, listener):
         self._listeners.append(listener)
 
+    def set_closed(self, value):
+        self._closed = value
+
+    def is_closed(self):
+        return self._closed
+
     def handle_connect(self):
-        self.logger.info("Sony Bravia TV: Connected")
+        self.logger.info("Sony Bravia: Connected")
 
     def handle_close(self):
-        self.close()
-        self.logger.info("Sony Bravia TV: Disconnected")
+        if not self.is_closed():
+            self.close()
+            self.logger.info("Sony Bravia: Disconnected")
+            self.set_closed(True)
 
     def writable(self):
         return (len(self._writeBuffer) > 0 or not self._sendQ.empty()) and self._waitForResponseQ.empty()
@@ -330,7 +337,7 @@ class ClientHandler(asyncore.dispatcher):
                 l.on_connection_closed()
             return
 
-        self.logger.debug("<-- Raw: {}".format(received))
+        self.logger.debug("Sony Bravia: <-- Raw: {}".format(received))
         data = CommData().unpack(received)
         if data.ctype == Type.ANSWER.value:
             if not self._waitForResponseQ.empty():
@@ -349,7 +356,7 @@ class ClientHandler(asyncore.dispatcher):
             # Need to stash this so we can check for a response in the reader
             self._waitForResponseQ.put(data)
             data = data.pack()
-            self.logger.debug("--> Raw: {}".format(data))
+            self.logger.debug("Sony Bravia: --> Raw: {}".format(data))
 
         sent = self.send(data)
         if sent < len(data):
@@ -358,40 +365,19 @@ class ClientHandler(asyncore.dispatcher):
 
     def start(self):
         try:
+            self.logger.debug("Sony Bravia: Connecting")
             self.create_socket()
             self.connect((self._host, self._port))
-
-            if self._connectionHandlerThread is self.DEAD_THREAD:
-                self.logger.debug("Sony Bravia TV: Starting connection handler")
-                self._connectionHandlerThread = Thread(
-                        name="Sony Bravia TV Connection Handler", target=self._connection_handler)
-                self._stopThread.clear()
-                self._connectionHandlerThread.start()
         except Exception as e:
             self.logger.exception("Sony Bravia: Connection handler error while connecting: {}".format(e))
             raise
 
     def stop(self):
-        if self._connectionHandlerThread is not self.DEAD_THREAD:
-            self.logger.debug("Sony Bravia TV: Stopping connection handler")
-            with self._stopThread:
-                self._stopThread.set()
-            self._connectionHandlerThread.join()
-            self._connectionHandlerThread = self.DEAD_THREAD
-            self.handle_close()
+        self.handle_close()
 
     def send_command(self, data):
-        self.logger.debug("Queueing Request: {}".format(data.pack()))
+        self.logger.debug("Sony Bravia: Queueing Request: {}".format(data.pack()))
         self._sendQ.put((time.time(), data))
-
-    def _connection_handler(self):
-        self.logger.debug("Sony Bravia: Starting connection handler thread")
-        while True:
-            asyncore.loop(3)
-            if self._stopThread.is_set():
-                break
-
-        self.logger.debug("Sony Bravia: Exiting connection handler thread")
 
 
 class SonyBraviaXBR65X810CDevice(AvDevice, ClientHandler.Listener):
@@ -407,6 +393,7 @@ class SonyBraviaXBR65X810CDevice(AvDevice, ClientHandler.Listener):
         super().__init__(name, logger)
         self._ip = ip
         self._port = port
+        self._sentQ = PriorityQueue()
         self._connectionHandler = ClientHandler(self._ip, int(self._port), self.logger, self)
 
     def connect(self):
@@ -479,43 +466,55 @@ class SonyBraviaXBR65X810CDevice(AvDevice, ClientHandler.Listener):
             l.on_responding()
 
         if comm.ctype != Type.ANSWER.value and comm.ctype != Type.NOTIFY.value:
-            self.logger.error("Sony Bravia response not an Answer or Notify type")
-            return
-
-        if comm.parameter == Answer.ERROR.value:
-            self.logger.error("Sony Bravia response error recieved")
+            self.logger.error("Sony Bravia: Response not an Answer or Notify type")
             return
 
         if comm.parameter == Answer.NOT_FOUND.value:
-            self.logger.error("Sony Bravia response: Not Found")
+            self.logger.error("Sony Bravia: Response: Not Found")
             return
 
-        # Ignore success responses.  We'll get a notification with the change
-        if comm.parameter == Answer.SUCCESS.value:
+        # Ignore success responses from non-Enquiry requests.  We'll get a notification with the change
+        _, data_sent = self._sentQ.get()
+        self._sentQ.task_done()
+        if data_sent.ctype == Type.CONTROL.value and comm.parameter == Answer.SUCCESS.value:
             return
 
         command = comm.function
         if command == Functions.POWER_STATUS.value:
+            if comm.parameter == Answer.ERROR.value:
+                self.logger.error("Sony Bravia: Response error recieved")
+                return
             super().set_power(int(comm.parameter) == 1)
         elif command == Functions.MUTE.value:
+            if comm.parameter == Answer.ERROR.value:
+                self.logger.error("Sony Bravia: Response error recieved")
+                return
             super().set_mute(int(comm.parameter) == 1)
         elif command == Functions.VOLUME.value:
+            if comm.parameter == Answer.ERROR.value:
+                self.logger.error("Sony Bravia: Response error recieved")
+                return
             super().set_volume(int(comm.parameter))
         elif command == Functions.INPUT.value:
-            v = Inputs.get_by_code(comm.parameter)
-            if v is Inputs.UNKNOWN:
-                self.logger.debug("Sony Bravia returned unknown source value")
+            if comm.parameter == Answer.ERROR.value:
+                self.logger.error("Sony Bravia: Response error recieved")
+                v = Inputs.get_by_code(999)
             else:
-                super().set_source(v.value)
+                v = Inputs.get_by_code(comm.parameter)
+                if v is Inputs.UNKNOWN:
+                    self.logger.error("Sony Bravia: Returned unknown source value")
+                    return
+            super().set_source(v.value)
 
-    "Sends single command to AV"""
+    """Sends single command to AV"""
     def _send(self, data):
         if not self.is_running() or self._connectionHandler is None:
             return
 
         data_len = len(data.pack())
         if data_len != CommData.MSGLEN:
-            self.logger.debug("Message data length({}) != to required {}".format(data_len, CommData.MSGLEN))
+            self.logger.debug("Sony Bravia: Message data length({}) != to required {}".format(data_len, CommData.MSGLEN))
             return
 
+        self._sentQ.put((time.time(), data))
         self._connectionHandler.send_command(data)

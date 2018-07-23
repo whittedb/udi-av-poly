@@ -1,6 +1,9 @@
 import logging
-from copy import deepcopy
 import polyinterface
+import os
+import asyncore
+from copy import deepcopy, copy
+from threading import Thread
 from av_funcs import get_server_data, get_profile_info
 from nodes.node_factory import NodeFactory
 
@@ -62,6 +65,9 @@ class AVController(polyinterface.Controller, NodeFactory.SsdpListener):
         self.name = "AV Controller"
         self.primary = self.address
         self._nodeFactory = NodeFactory(self, self)
+        self._stopAsyncLoop = False
+        self._asyncStop = AsyncoreStop(self._stopAsyncLoop)
+        self._asyncoreThread = Thread(name="AV Async Core", target=self._asyncore_loop)
 
     def start(self):
         """
@@ -83,6 +89,7 @@ class AVController(polyinterface.Controller, NodeFactory.SsdpListener):
         self.setDriver("ST", 1)
         self.reportDrivers()
 
+        self._asyncoreThread.start()
         self.discover()
 
     def discover(self, *args, **kwargs):
@@ -158,7 +165,6 @@ class AVController(polyinterface.Controller, NodeFactory.SsdpListener):
         or shortPoll. No need to Super this method the parent version does nothing.
         The timer can be overridden in the server.json.
         """
-        self.l_debug("longpoll", "Long Poll Called")
         self.heartbeat()
 
     def heartbeat(self):
@@ -187,6 +193,8 @@ class AVController(polyinterface.Controller, NodeFactory.SsdpListener):
         LOGGER.info("Oh God I\"m being deleted. Nooooooooooooooooooooooooooooooooooooooooo.")
 
     def stop(self):
+        self._asyncStop.stop()
+        self._asyncoreThread.join()
         for n in self.get_device_nodes().values():
             n.stop()
         self._nodeFactory.shutdown_ssdp_listener()
@@ -334,6 +342,17 @@ class AVController(polyinterface.Controller, NodeFactory.SsdpListener):
         self.l_info("cmd_set_debug_mode", val)
         self.set_debug_mode(val)
 
+    def _asyncore_loop(self):
+        self.l_info("_asyncore_loop", "Sony Bravia: Starting asyncore loop thread")
+        while True:
+            try:
+                asyncore.loop(3, True)
+            except asyncore.ExitNow:
+                for channel in copy(asyncore.socket_map).values():
+                    channel.handle_close()
+                break
+        self.l_info("_asyncore_loop", "Sony Bravia: Ending asyncore loop thread")
+
     """
     Optional.
     Since the controller is the parent node in ISY, it will actual show up as a node.
@@ -357,3 +376,26 @@ class AVController(polyinterface.Controller, NodeFactory.SsdpListener):
         {"driver": "GV4", "value": 0, "uom": 25},   # heartbeat
         {"driver": "GV5", "value": DEFAULT_DEBUG_MODE, "uom": 25}    # Debug (Log) Mode
     ]
+
+
+class AsyncoreStop(asyncore.file_dispatcher):
+    def __init__(self, event_to_raise):
+        self._eventToRaise = event_to_raise
+        self._in_fd, self._out_fd = os.pipe()
+        self._pipe = asyncore.file_wrapper(self._in_fd)
+        super().__init__(self._pipe)
+
+    def writable(self):
+        return False
+
+    def handle_close(self):
+        os.close(self._out_fd)
+        super().close()
+
+    def handle_read(self):
+        buff = self.recv(64)
+        self.handle_close()
+        raise asyncore.ExitNow("Signal asyncore loop to exit")
+
+    def stop(self):
+        os.write(self._out_fd, b"stop")

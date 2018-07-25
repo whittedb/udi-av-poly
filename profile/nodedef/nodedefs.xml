@@ -55,17 +55,18 @@
     <nodeDef id="VSX1021" nls="vsx1021">
         <editors/>
         <sts>
-            <st id="ST" editor="bool"/>
             <!-- Device Type -->
             <st id="GV1" editor="I_DEVICE_TYPE"/>
+            <!-- Status -->
+            <st id="ST" editor="bool"/>
+            <!-- Input -->
+            <st id="GV5" editor="I_VSX1021_SOURCE"/>
             <!-- Power -->
             <st id="GV2" editor="I_ON_OFF"/>
             <!-- Mute -->
             <st id="GV3" editor="I_ON_OFF"/>
             <!-- Volume -->
             <st id="GV4" editor="I_VSX1021_DB_VOLUME_FLOAT"/>
-            <!-- Input Source -->
-            <st id="GV5" editor="I_VSX1021_SOURCE"/>
         </sts>
         <cmds>
             <sends/>
@@ -89,17 +90,18 @@
     <nodeDef id="BRAVIA" nls="bravia">
         <editors/>
         <sts>
-            <st id="ST" editor="bool"/>
             <!-- Device Type -->
             <st id="GV1" editor="I_DEVICE_TYPE"/>
+            <!-- Status -->
+            <st id="ST" editor="bool"/>
+            <!-- Input -->
+            <st id="GV5" editor="I_BRAVIA_SOURCE"/>
             <!-- Power -->
             <st id="GV2" editor="I_ON_OFF"/>
             <!-- Mute -->
             <st id="GV3" editor="I_ON_OFF"/>
             <!-- Volume -->
             <st id="GV4" editor="I_VOLUME"/>
-            <!-- Input Source -->
-            <st id="GV5" editor="I_BRAVIA_SOURCE"/>
         </sts>
         <cmds>
             <sends/>

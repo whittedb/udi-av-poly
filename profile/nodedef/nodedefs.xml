@@ -127,6 +127,9 @@
                 <cmd id="SET_INPUT">
                     <p id="" editor="I_BRAVIA_INPUT" init="GV4"/>
                 </cmd>
+                <cmd id="SET_IRCC">
+                    <p id="" editor="I_BRAVIA_IRCC" init="GV5"/>
+                </cmd>
             </accepts>
         </cmds>
     </nodeDef>

@@ -45,6 +45,10 @@
     </editor>
 
     <editor id="I_BRAVIA_INPUT">
-        <range uom="25" subset="0-6,999" nls="BRAVIA_INPUT"/>
+        <range uom="25" subset="0-8,999" nls="BRAVIA_INPUT"/>
+    </editor>
+
+    <editor id="I_BRAVIA_IRCC">
+        <range uom="25" min="0" max="97" nls="BRAVIA_IRCC"/>
     </editor>
 </editors>

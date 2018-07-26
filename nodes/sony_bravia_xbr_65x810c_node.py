@@ -61,6 +61,10 @@ class SonyBraviaXBR65X810CNode(AVNode, AvDevice.Listener):
         if val != SonyBraviaXBR65X810CDevice.INPUTS["UNKNOWN"]:
             self.client.set_input(val)
 
+    def do_ircc(self, val):
+        self.l_debug("do_ircc", "CMD IRCC: {}".format(val))
+        self.client.do_ircc(val)
+
     def on_connected(self):
         self.setDriver("ST", 1)
 
@@ -111,6 +115,11 @@ class SonyBraviaXBR65X810CNode(AVNode, AvDevice.Listener):
         self.l_info("cmd_set_input", val)
         self.set_input(val)
 
+    def cmd_set_ircc(self, command):
+        val = command.get("value")
+        self.l_info("cmd_set_ircc", val)
+        self.do_ircc(val)
+
     def l_info(self, name, string):
         LOGGER.info("%s:%s: %s" % (self.id, name, string))
 
@@ -127,8 +136,10 @@ class SonyBraviaXBR65X810CNode(AVNode, AvDevice.Listener):
         "SET_POWER": cmd_set_power,
         "SET_MUTE": cmd_set_mute,
         "SET_VOLUME": cmd_set_volume,
-        "SET_INPUT": cmd_set_input
+        "SET_INPUT": cmd_set_input,
+        "SET_IRCC": cmd_set_ircc
     }
 
     bravia_drivers = [
+        {"driver": "GV5", "value": 0, "uom": 56}  # Input Source
     ]

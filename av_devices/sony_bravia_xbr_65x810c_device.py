@@ -149,8 +149,19 @@ class IrccCommands(Enum):
     def __new__(cls, v):
         obj = object.__new__(cls)
         # Zero pad
-        obj._value_ = str(v).zfill(16)
+        obj._value_ = v
+        obj.code = str(v).zfill(16)
         return obj
+
+    @classmethod
+    def get_by_value(cls, value):
+        if isinstance(value, str):
+            value = int(value)
+        for name, member in cls.__members__.items():
+            if member.value == value:
+                return member
+        else:
+            raise ValueError
 
 
 @unique
@@ -163,6 +174,7 @@ class Inputs(Enum):
     COMPOSITE = 5, (3, 1)
     COMPONENT = 6, (4, 1)
     SCREEN_MIRROR = 7, (5, 1)
+    NETFLIX = 8, (0, IrccCommands.NETFLIX.value)
     UNKNOWN = 999, (-1, -1)
 
     def __new__(cls, keycode, param):
@@ -174,6 +186,11 @@ class Inputs(Enum):
 
     @classmethod
     def get_by_code(cls, code):
+        if not isinstance(code, str):
+            code = str(code).zfill(16)
+        elif isinstance(code, str) and len(code) != 16:
+            code = code.zfill(16)
+
         for name, member in cls.__members__.items():
             if member.code == code:
                 return member
@@ -274,7 +291,13 @@ class CommData(object):
     def goto_netflix(self):
         with self._lock:
             self.function = Functions.IRCC_CODE.value
-            self.parameter = IrccCommands.NETFLIX.value
+            self.parameter = IrccCommands.NETFLIX.code
+            return self
+
+    def do_ircc(self, code):
+        with self._lock:
+            self.function = Functions.IRCC_CODE.value
+            self.parameter = IrccCommands.get_by_value(code).code
             return self
 
     def pack(self):
@@ -445,7 +468,14 @@ class SonyBraviaXBR65X810CDevice(AvDevice, ClientHandler.Listener):
 
     "Send request to change input selector"""
     def set_input(self, input_value):
-        self._send(CommData().set_input(input_value))
+        if int(input_value) >= Inputs.NETFLIX.value:
+            self.do_ircc(Inputs.get_by_value(input_value).code)
+        else:
+            self._send(CommData().set_input(input_value))
+
+    "Send IRCC request"""
+    def do_ircc(self, code):
+        self._send(CommData().do_ircc(code))
 
     def query_power(self):
         self._send(CommData(Type.ENQUIRY).get_power())
@@ -486,8 +516,18 @@ class SonyBraviaXBR65X810CDevice(AvDevice, ClientHandler.Listener):
         if comm.ctype == Type.ANSWER.value:
             _, data_sent = self._sentQ.get()
             self._sentQ.task_done()
-            # Ignore success responses from Control requests.  We'll get a notification with the change
+
+            # Some success messages can be ignored since we'll get a notification of the change
             if data_sent.ctype == Type.CONTROL.value and comm.parameter == Answer.SUCCESS.value:
+                # We don't get a notification from an "input" change if we have loaded an app (i.e. NetFlix)
+                # and then set the input back to the same value in order to exit the app
+                if comm.function == Functions.INPUT.value:
+                    self.input = Inputs.get_by_code(data_sent.parameter).value
+
+                # If an IRCC code is sent successfully, an app may have been loaded.  In that case, we want to
+                # query the input mode so the value gets updated
+                if comm.function == Functions.IRCC_CODE.value:
+                    self.query_input()
                 return
 
         if comm.parameter == Answer.NOT_FOUND.value:
@@ -522,7 +562,7 @@ class SonyBraviaXBR65X810CDevice(AvDevice, ClientHandler.Listener):
             v = Inputs.get_by_code(comm.parameter)
             if v is Inputs.UNKNOWN:
                 self.logger.error("Sony Bravia: Returned unknown source value")
-            self.input = int(v.value)
+            self.input = v.value
 
     """Sends single command to AV"""
     def _send(self, data):

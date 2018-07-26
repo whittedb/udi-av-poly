@@ -53,7 +53,7 @@ class AVNode(polyinterface.Node):
     def set_volume(self, volume):
         pass
 
-    def set_source(self, source):
+    def set_input(self, source):
         pass
 
     def l_info(self, name, string):
@@ -74,6 +74,6 @@ class AVNode(polyinterface.Node):
         {"driver": "GV1", "value": 0, "uom": 25},   # Device Type
         {"driver": "GV2", "value": 0, "uom": 25},   # Power
         {"driver": "GV3", "value": 0, "uom": 25},   # Mute
-        {"driver": "GV4", "value": -80, "uom": 56},  # Volume
-        {"driver": "GV5", "value": 999, "uom": 25}  # Input Source
+        {"driver": "SVOL", "value": -80, "uom": 56},  # Volume
+        {"driver": "GV4", "value": 999, "uom": 25}  # Input Source
     ]

@@ -496,22 +496,33 @@ class SonyBraviaXBR65X810CDevice(AvDevice, ClientHandler.Listener):
 
         command = comm.function
         if comm.ctype == Type.ANSWER.value and comm.parameter == Answer.ERROR.value:
-            if command is Functions.INPUT.value:
-                super().set_source(Inputs.UNKNOWN.value)
+            if command == Functions.INPUT.value:
+                self.input = int(Inputs.UNKNOWN.value)
+            elif command == Functions.VOLUME.value:
+                self.volume = 0
+            elif command == Functions.MUTE.value:
+                self.mute = False
             else:
-                self.logger.error("Sony Bravia: Response error recieved")
+                self.logger.error("Sony Bravia: Response error received")
+            return
 
         if command == Functions.POWER_STATUS.value:
-            super().set_power(int(comm.parameter) == 1)
+            self.power = int(comm.parameter) == 1
+            if self.power:
+                self.query_input()
+            else:
+                self.mute = False
+                self.volume = 0
+                self.input = Inputs.UNKNOWN.value
         elif command == Functions.MUTE.value:
-            super().set_mute(int(comm.parameter))
+            self.mute = int(comm.parameter)
         elif command == Functions.VOLUME.value:
-            super().set_volume(int(comm.parameter))
+            self.volume = int(comm.parameter)
         elif command == Functions.INPUT.value:
             v = Inputs.get_by_code(comm.parameter)
             if v is Inputs.UNKNOWN:
                 self.logger.error("Sony Bravia: Returned unknown source value")
-            super().set_source(v.value)
+            self.input = int(v.value)
 
     """Sends single command to AV"""
     def _send(self, data):

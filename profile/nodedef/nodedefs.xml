@@ -39,15 +39,24 @@
             <!-- Mute -->
             <st id="GV3" editor="I_ON_OFF"/>
             <!-- Volume -->
-            <st id="GV4" editor="I_VOLUME"/>
+            <st id="SVOL" editor="I_VOLUME"/>
             <!-- Input Source -->
-            <st id="GV5" editor="I_SOURCE"/>
+            <st id="GV4" editor="I_INPUT"/>
         </sts>
         <cmds>
             <sends/>
             <accepts>
                 <cmd id="SET_POWER">
-                    <p id="" editor="I_DM" init="GV2"/>
+                    <p id="" editor="I_ON_OFF" init="GV2"/>
+                </cmd>
+                <cmd id="SET_MUTE">
+                    <p id="" editor="I_ON_OFF" init="GV3"/>
+                </cmd>
+                <cmd id="SET_VOLUME">
+                    <p id="" editor="I_VOLUME" init="SVOL"/>
+                </cmd>
+                <cmd id="SET_INPUT">
+                    <p id="" editor="I_INPUT" init="GV4"/>
                 </cmd>
             </accepts>
         </cmds>
@@ -60,13 +69,13 @@
             <!-- Status -->
             <st id="ST" editor="bool"/>
             <!-- Input -->
-            <st id="GV5" editor="I_VSX1021_SOURCE"/>
+            <st id="GV4" editor="I_VSX1021_INPUT"/>
             <!-- Power -->
             <st id="GV2" editor="I_ON_OFF"/>
             <!-- Mute -->
             <st id="GV3" editor="I_ON_OFF"/>
             <!-- Volume -->
-            <st id="GV4" editor="I_VSX1021_DB_VOLUME_FLOAT"/>
+            <st id="SVOL" editor="I_VSX1021_VOLUME"/>
         </sts>
         <cmds>
             <sends/>
@@ -78,10 +87,10 @@
                     <p id="" editor="I_ON_OFF" init="GV3"/>
                 </cmd>
                 <cmd id="SET_VOLUME">
-                    <p id="" editor="I_VSX1021_DB_VOLUME_LIST" init="GV4"/>
+                    <p id="" editor="I_VSX1021_VOLUME" init="SVOL"/>
                 </cmd>
-                <cmd id="SET_SOURCE">
-                    <p id="" editor="I_VSX1021_SOURCE" init="GV5"/>
+                <cmd id="SET_INPUT">
+                    <p id="" editor="I_VSX1021_INPUT" init="GV4"/>
                 </cmd>
             </accepts>
         </cmds>
@@ -95,13 +104,13 @@
             <!-- Status -->
             <st id="ST" editor="bool"/>
             <!-- Input -->
-            <st id="GV5" editor="I_BRAVIA_SOURCE"/>
+            <st id="GV4" editor="I_BRAVIA_INPUT"/>
             <!-- Power -->
             <st id="GV2" editor="I_ON_OFF"/>
             <!-- Mute -->
             <st id="GV3" editor="I_ON_OFF"/>
             <!-- Volume -->
-            <st id="GV4" editor="I_VOLUME"/>
+            <st id="SVOL" editor="I_VOLUME"/>
         </sts>
         <cmds>
             <sends/>
@@ -113,10 +122,10 @@
                     <p id="" editor="I_ON_OFF" init="GV3"/>
                 </cmd>
                 <cmd id="SET_VOLUME">
-                    <p id="" editor="I_VOLUME" init="GV4"/>
+                    <p id="" editor="I_VOLUME" init="SVOL"/>
                 </cmd>
-                <cmd id="SET_SOURCE">
-                    <p id="" editor="I_BRAVIA_SOURCE" init="GV5"/>
+                <cmd id="SET_INPUT">
+                    <p id="" editor="I_BRAVIA_INPUT" init="GV4"/>
                 </cmd>
             </accepts>
         </cmds>

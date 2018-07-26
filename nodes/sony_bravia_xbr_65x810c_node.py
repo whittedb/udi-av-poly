@@ -52,13 +52,14 @@ class SonyBraviaXBR65X810CNode(AVNode, AvDevice.Listener):
         self.l_debug("set_volume", "CMD Volume: {}".format(val))
         self.client.set_volume(val)
 
-    def set_source(self, val):
+    def set_input(self, val):
         try:
-            self.l_debug("set_source", "CMD Source: {}".format(
+            self.l_debug("set_input", "CMD Source: {}".format(
                     SonyBraviaXBR65X810CDevice.INVERTED_INPUTS[str(val).zfill(2)]))
         except KeyError:
             pass
-        self.client.set_input(val)
+        if val != SonyBraviaXBR65X810CDevice.INPUTS["UNKNOWN"]:
+            self.client.set_input(val)
 
     def on_connected(self):
         self.setDriver("ST", 1)
@@ -69,24 +70,23 @@ class SonyBraviaXBR65X810CNode(AVNode, AvDevice.Listener):
     def on_power(self, power_state):
         self.l_debug("on_power", "{}".format("True" if power_state else "False"))
         self.setDriver("GV2", 1 if power_state else 0)
-        if not power_state:
-            self.setDriver("GV5", 999)
 
     def on_volume(self, volume):
         self.l_debug("on_volume", "{}".format(volume))
-        self.setDriver("GV4", self.client.volume)
+        self.setDriver("SVOL", self.client.volume)
 
     def on_mute(self, mute_state):
         self.l_debug("on_mute", "{}".format("True" if mute_state else "False"))
         self.setDriver("GV3", 1 if mute_state else 0)
 
-    def on_source(self, source):
-        source = int(source)
+    def on_input(self, val):
+        v = int(val)
+        self.l_debug("on_input", "Val: {}".format(v))
         try:
-            self.l_debug("on_source", "{}".format(SonyBraviaXBR65X810CDevice.INVERTED_INPUTS[source]))
+            self.l_debug("on_input", "{}".format(SonyBraviaXBR65X810CDevice.INVERTED_INPUTS[v]))
         except KeyError:
-            pass
-        self.setDriver("GV5", source)
+            self.l_warning("on_input", "Unknown input: {}".format(v))
+        self.setDriver("GV4", v)
 
     """
     Command Functions
@@ -106,10 +106,10 @@ class SonyBraviaXBR65X810CNode(AVNode, AvDevice.Listener):
         self.l_info("cmd_set_volume", val)
         self.set_volume(val)
 
-    def cmd_set_source(self, command):
+    def cmd_set_input(self, command):
         val = command.get("value")
-        self.l_info("cmd_set_source", val)
-        self.set_source(val)
+        self.l_info("cmd_set_input", val)
+        self.set_input(val)
 
     def l_info(self, name, string):
         LOGGER.info("%s:%s: %s" % (self.id, name, string))
@@ -127,7 +127,7 @@ class SonyBraviaXBR65X810CNode(AVNode, AvDevice.Listener):
         "SET_POWER": cmd_set_power,
         "SET_MUTE": cmd_set_mute,
         "SET_VOLUME": cmd_set_volume,
-        "SET_SOURCE": cmd_set_source
+        "SET_INPUT": cmd_set_input
     }
 
     bravia_drivers = [

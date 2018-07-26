@@ -343,7 +343,7 @@ class AVController(polyinterface.Controller, NodeFactory.SsdpListener):
         self.set_debug_mode(val)
 
     def _asyncore_loop(self):
-        self.l_info("_asyncore_loop", "Sony Bravia: Starting asyncore loop thread")
+        self.l_info("_asyncore_loop", "Starting asyncore loop thread")
         while True:
             try:
                 asyncore.loop(3, True)
@@ -351,7 +351,7 @@ class AVController(polyinterface.Controller, NodeFactory.SsdpListener):
                 for channel in copy(asyncore.socket_map).values():
                     channel.handle_close()
                 break
-        self.l_info("_asyncore_loop", "Sony Bravia: Ending asyncore loop thread")
+        self.l_info("_asyncore_loop", "Ending asyncore loop thread")
 
     """
     Optional.
@@ -393,7 +393,7 @@ class AsyncoreStop(asyncore.file_dispatcher):
         super().close()
 
     def handle_read(self):
-        buff = self.recv(64)
+        self.recv(64)
         self.handle_close()
         raise asyncore.ExitNow("Signal asyncore loop to exit")
 

@@ -32,23 +32,19 @@
         <range uom="56" min="0" max="100" step="1" prec="0"/>
     </editor>
 
-    <editor id="I_VSX1021_DB_VOLUME_LIST">
-        <range uom="13" min="-80" max="12" step=".5" prec="1"/>
+    <editor id="I_VSX1021_VOLUME">
+        <range uom="13" min="-80" max="0" step=".5" prec="1"/>
     </editor>
 
-    <editor id="I_VSX1021_DB_VOLUME_FLOAT">
-       <range uom="56" prec="1"/>
+    <editor id="I_GENERIC_INPUT">
+        <range uom="25" subset="0-1,999" nls="GENERIC_INPUT"/>
     </editor>
 
-    <editor id="I_SOURCE">
-        <range uom="25" subset="999" nls="SOURCE"/>
+    <editor id="I_VSX1021_INPUT">
+        <range uom="25" subset="0,1,2,3,4,5,10,11,14,15,17,18,19,20,21,22,23,25,26,27,31,33,999" nls="VSX1021_INPUT"/>
     </editor>
 
-    <editor id="I_VSX1021_SOURCE">
-        <range uom="25" subset="0,1,2,3,4,5,10,11,14,15,17,18,19,20,21,22,23,25,26,27,31,33,999" nls="VSX1021_SOURCE"/>
-    </editor>
-
-    <editor id="I_BRAVIA_SOURCE">
-        <range uom="25" subset="0-6,999" nls="BRAVIA_SOURCE"/>
+    <editor id="I_BRAVIA_INPUT">
+        <range uom="25" subset="0-6,999" nls="BRAVIA_INPUT"/>
     </editor>
 </editors>

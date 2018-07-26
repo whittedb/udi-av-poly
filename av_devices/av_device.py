@@ -51,7 +51,7 @@ class AvDevice(object):
         def on_mute(self, mute_state):
             pass
 
-        def on_source(self, source):
+        def on_input(self, input_value):
             pass
 
         def on_connected(self):
@@ -83,10 +83,10 @@ class AvDevice(object):
         self._startupComplete = Event()
         self._stateMachineLock = RLock()
         self._name = name
-        self._power = None
-        self._volume = None
-        self._mute = None
-        self._source = None
+        self._power = False
+        self._volume = 0
+        self._mute = False
+        self._input = None
         self.listeners = []
 
         self._stateMachine.add_model(model=self, model_context=self._stateMachineLock)
@@ -235,28 +235,31 @@ class AvDevice(object):
 
     # Get raw device input source value
     @property
-    def source(self):
-        "Get current source input selection"""
-        return self._source
+    def input(self):
+        return self._input
 
-    def set_power(self, power_state):
+    @power.setter
+    def power(self, power_state):
         self._power = power_state
         for l in self.listeners:
             l.on_power(self.power)
 
     # Set raw device volume
-    def set_volume(self, volume):
+    @volume.setter
+    def volume(self, volume):
         self._volume = volume
         for l in self.listeners:
             l.on_volume(self.volume)
 
-    def set_mute(self, mute_state):
+    @mute.setter
+    def mute(self, mute_state):
         self._mute = mute_state
         for l in self.listeners:
             l.on_mute(self.mute)
 
-    # Set raw device input source value
-    def set_source(self, source):
-        self._source = source
+    # Set raw device input value
+    @input.setter
+    def input(self, input_value):
+        self._input = input_value
         for l in self.listeners:
-            l.on_source(self.source)
+            l.on_input(self.input)

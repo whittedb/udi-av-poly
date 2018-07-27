@@ -29,6 +29,9 @@ class PioneerVSX1021Node(AVNode, AvDevice.Listener):
         self.client.stop()
         self.reportDrivers()
 
+    def query(self):
+        self.client.query()
+
     def set_power(self, val):
         self.l_debug("set_power", "CMD Power: {}".format("True" if val else "False"))
         self.client.set_power(val == 1)

@@ -214,8 +214,9 @@ class CommData(object):
     _header = b"*S"
     _footer = bytes([0x0a])
 
-    def __init__(self, ctype=Type.CONTROL, function="", parameter=""):
+    def __init__(self, ctype=Type.CONTROL, function="", parameter="", pause=0):
         self._lock = Lock()
+        self.pause = pause
         with self._lock:
             self.ctype = ctype.value
             if function == "":
@@ -337,7 +338,7 @@ class ClientHandler(asyncore.dispatcher):
         self._listeners = []
         if listener is not None:
             self._listeners.append(listener)
-        self._closed = False
+        self._closed = True
         super().__init__()
 
     def add_listener(self, listener):
@@ -351,6 +352,7 @@ class ClientHandler(asyncore.dispatcher):
 
     def handle_connect(self):
         self.logger.info("Sony Bravia: Connected")
+        self.set_closed(False)
 
     def handle_close(self):
         if not self.is_closed():
@@ -386,6 +388,9 @@ class ClientHandler(asyncore.dispatcher):
             data = self._writeBuffer.pop()
         else:
             _, data = self._sendQ.get()
+            if data.pause > 0:
+                time.sleep(data.pause)
+
             # Need to stash this so we can check for a response in the reader
             self._waitForResponseQ.put(data)
             data = data.pack()
@@ -443,53 +448,53 @@ class SonyBraviaXBR65X810CDevice(AvDevice, ClientHandler.Listener):
             self._connectionHandler = None
 
     def initialize_state(self):
-        self.query_device()
+        self.query()
         time.sleep(1)
 
     "Turn device on/off"""
-    def set_power(self, turn_on):
-        self._send(CommData().set_power(turn_on))
+    def set_power(self, turn_on, pause=0):
+        self._send(CommData(pause=pause).set_power(turn_on))
 
     "Mute/Unmute sound"""
-    def set_mute(self, mute_on):
-        self._send(CommData().set_mute(mute_on))
+    def set_mute(self, mute_on, pause=0):
+        self._send(CommData(pause=pause).set_mute(mute_on))
 
     "Set volume to specific value on 0-100 scale"""
-    def set_volume(self, volume):
-        self._send(CommData().set_volume(volume))
+    def set_volume(self, volume, pause=0):
+        self._send(CommData(pause=pause).set_volume(volume))
 
     "Send request to increment volume by 1 unit"""
-    def volume_up(self):
-        self._send(CommData().volume_up())
+    def volume_up(self, pause=0):
+        self._send(CommData(pause=pause).volume_up())
 
     "Send request to decrease volume by 1 unit"""
-    def volume_down(self):
-        self._send(CommData().volume_down())
+    def volume_down(self, pause=0):
+        self._send(CommData(pause=pause).volume_down())
 
     "Send request to change input selector"""
-    def set_input(self, input_value):
+    def set_input(self, input_value, pause=0):
         if int(input_value) >= Inputs.NETFLIX.value:
-            self.do_ircc(Inputs.get_by_value(input_value).code)
+            self.do_ircc(Inputs.get_by_value(input_value).code, pause=pause)
         else:
-            self._send(CommData().set_input(input_value))
+            self._send(CommData(pause=pause).set_input(input_value))
 
     "Send IRCC request"""
-    def do_ircc(self, code):
-        self._send(CommData().do_ircc(code))
+    def do_ircc(self, code, pause=0):
+        self._send(CommData(pause=pause).do_ircc(code))
 
-    def query_power(self):
-        self._send(CommData(Type.ENQUIRY).get_power())
+    def query_power(self, pause=0):
+        self._send(CommData(Type.ENQUIRY, pause=pause).get_power())
 
-    def query_volume(self):
-        self._send(CommData(Type.ENQUIRY).get_volume())
+    def query_volume(self, pause=0):
+        self._send(CommData(Type.ENQUIRY, pause=pause).get_volume())
 
-    def query_input(self):
-        self._send(CommData(Type.ENQUIRY).get_input())
+    def query_input(self, pause=0):
+        self._send(CommData(Type.ENQUIRY, pause=pause).get_input())
 
-    def query_mute(self):
-        self._send(CommData(Type.ENQUIRY).get_mute())
+    def query_mute(self, pause=0):
+        self._send(CommData(Type.ENQUIRY, pause=pause).get_mute())
 
-    def query_device(self):
+    def query(self):
         self.query_power()
         self.query_volume()
         self.query_mute()
@@ -527,7 +532,7 @@ class SonyBraviaXBR65X810CDevice(AvDevice, ClientHandler.Listener):
                 # If an IRCC code is sent successfully, an app may have been loaded.  In that case, we want to
                 # query the input mode so the value gets updated
                 if comm.function == Functions.IRCC_CODE.value:
-                    self.query_input()
+                    self.query_input(pause=2)
                 return
 
         if comm.parameter == Answer.NOT_FOUND.value:

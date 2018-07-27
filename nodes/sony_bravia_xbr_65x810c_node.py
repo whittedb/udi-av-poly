@@ -30,7 +30,7 @@ class SonyBraviaXBR65X810CNode(AVNode, AvDevice.Listener):
         self.reportDrivers()
 
     def query(self):
-        self.client.query_device()
+        self.client.query()
 
     def set_power(self, val):
         self.l_debug("set_power", "CMD Power: {}".format("True" if val else "False"))

@@ -58,6 +58,7 @@
                 <cmd id="SET_INPUT">
                     <p id="" editor="I_INPUT" init="GV4"/>
                 </cmd>
+                <cmd id="QUERY"/>
             </accepts>
         </cmds>
     </nodeDef>
@@ -92,6 +93,7 @@
                 <cmd id="SET_INPUT">
                     <p id="" editor="I_VSX1021_INPUT" init="GV4"/>
                 </cmd>
+                <cmd id="QUERY"/>
             </accepts>
         </cmds>
     </nodeDef>
@@ -130,6 +132,7 @@
                 <cmd id="SET_IRCC">
                     <p id="" editor="I_BRAVIA_IRCC" init="GV5"/>
                 </cmd>
+                <cmd id="QUERY"/>
             </accepts>
         </cmds>
     </nodeDef>

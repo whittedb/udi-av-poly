@@ -40,6 +40,8 @@ class PioneerVSX1021Device(AvDevice):
 
     INVERTED_INPUTS = {v: k for k, v in INPUTS.items()}
 
+    DEAD_THREAD = Thread()
+
     def __init__(self, name, ip, port=23, logger=None):
         if logger:
             self.logger = logger
@@ -49,7 +51,7 @@ class PioneerVSX1021Device(AvDevice):
         self._ip = ip
         self._port = port
         self._tn = None
-        self._listenerThread = None
+        self._listenerThread = self.DEAD_THREAD
         self._stopListener = False
         # self._volDbScale = None
         # self._vol100Scale = None
@@ -69,23 +71,25 @@ class PioneerVSX1021Device(AvDevice):
             self._tn.close()
 
     def start_listener_thread(self):
-        self._listenerThread = Thread(name="Pioneer VSX1021 Receiver", target=self._input_listener)
-        self._listenerThread.start()
+        if self._listenerThread == self.DEAD_THREAD:
+            self._listenerThread = Thread(name="Pioneer VSX1021 Receiver", target=self._input_listener)
+            self._listenerThread.start()
 
     def stop_listener_thread(self, socket_error=False):
         self.logger.debug("VSX1021: Stopping listener thread")
-        if self._listenerThread is not None:
+        if self._listenerThread != self.DEAD_THREAD:
             self._stopListener = True
 
             # If we are not stopping due to a connection error, then request some data to speed up the receiver
             # thread shutdown
             if not socket_error:
                 self._send("?P")
-            self._listenerThread.join()
-            self._listenerThread = None
+            if self._listenerThread.is_alive():
+                self._listenerThread.join()
+            self._listenerThread = self.DEAD_THREAD
     
     def initialize_state(self):
-        self.query_device()
+        self.query()
         sleep(1)
 
     "Sends single command to AV"""
@@ -136,7 +140,7 @@ class PioneerVSX1021Device(AvDevice):
                 self.logger.debug("VSX1021: <-- {}".format(data))
 
                 self._update_states(data)
-            except (socket.error, socket.gaierror, EOFError) as e:
+            except (ConnectionResetError, socket.error, socket.gaierror, EOFError) as e:
                 self.logger.debug("VSX1021: Socket error on read, {}".format(e))
                 self.handle_error(error=e)
 
@@ -189,7 +193,7 @@ class PioneerVSX1021Device(AvDevice):
     def query_mute(self):
         self._send("?M")
 
-    def query_device(self):
+    def query(self):
         self.query_power()
         self.query_volume()
         self.query_mute()

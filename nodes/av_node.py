@@ -44,6 +44,9 @@ class AVNode(polyinterface.Node):
         self.id = self.TYPE
         super().__init__(controller, primary, address, name)
 
+    def query(self):
+        pass
+
     def set_power(self, on_off):
         pass
 
@@ -68,7 +71,9 @@ class AVNode(polyinterface.Node):
     def l_debug(self, name, string):
         LOGGER.debug("%s: %s" % (name, string))
 
-    commands = {}
+    commands = {
+        "QUERY": query
+    }
     drivers = [
         {"driver": "ST", "value": 0, "uom": 2},
         {"driver": "GV1", "value": 0, "uom": 25},   # Device Type

@@ -346,7 +346,7 @@ class AVController(polyinterface.Controller, NodeFactory.SsdpListener):
         self.l_info("_asyncore_loop", "Starting asyncore loop thread")
         while True:
             try:
-                asyncore.loop(3, True)
+                asyncore.loop(2, True)
             except asyncore.ExitNow:
                 for channel in copy(asyncore.socket_map).values():
                     channel.handle_close()

@@ -12,31 +12,16 @@ This nodeserver supports multiple A/V devices, but only if they have been built 
 are listed below along with any required parameters needed to specify how to connect to them.  Each one is particular
 to that device and will have different requirements.
    
-### Developer perspective:
-This nodeserver is built on a state machine framework using the transitions python3 library.  Adding support for
-new devices is fairly easy.  To add support for a new device:
-
-  1. Subclass AVDevice and override the indicated methods to implement the device client communication layer.
-     The state machine will drive the calls to these methods when necessary.
-  2. Subclass the AVNode class, which is a superclass of the PolyGlot V2 Node.  The AVDevice class defines
-     a Listener class that can be inherited by the new class to listen for events from the device client communication
-     instances.
-  3. Add config parameter parsing and/or SSDP parsing to NodeFactory.get_params().
-  4. Update NodeFactory.on_ssdp_response() to build the new node.
-  5. Update the node definitions, nls entries and editors as needed.
- 
-The included Pioneer VSX-1021 and Sony Bravia devices are available as examples
-
 ### Supported Devices:
   1. Pioneer VSX-1021 (possibly other VSX series, but use the VSX1021 custom parameter to define them) receiver
   
      Custom config parameters:
      
-       * VSX1021xxxx = Host IP and port of receiver, i.e. 192.168.1.52:23
+       * VSX1021xxxx = Host IP and port of receiver, i.e. 192.168.1.xx:23
        
-  2. Sony Bravia XBR-65X810C (possibly other Bravia series, but use the BRAVIA customer parameter to define them ) TV.  
+  2. Sony Bravia XBR-65X810C (possibly other Bravia series, but use the BRAVIA customer parameter to define them) TV.  
   Be sure to have Simple IP Control turned on in your network settings on the TV.
-       * BRAVIAxxxx = Host IP and port of receiver, i.e. 192.168.1.51:20060
+       * BRAVIAxxxx = Host IP and port of receiver, i.e. 192.168.1.xx:20060
 
 SSDP will search the network for your devices (the devices should be on.  If they are off, then they might be missed).
 If SSDP doesn't find your devices, then you can define custom parameters for it as indicated.  If defining custom
@@ -58,9 +43,31 @@ will be required.
 ### Requirements
 1. [Polyglot V2](https://github.com/UniversalDevicesInc/polyglot-v2) >= 2.2.0
 2. This has only been tested with ISY 5.0.12 so it is not confirmed to work with any prior version.
+3. Tested on Raspberry Pi Jessie
+
+### Developer perspective:
+This nodeserver is built on a state machine framework using the transitions python3 library.  Adding support for
+new devices is fairly easy.  To add support for a new device:
+
+  1. Subclass AVDevice and override the indicated methods to implement the device client communication layer.
+     The state machine will drive the calls to these methods when necessary.
+  2. Subclass the AVNode class, which inherits PolyInterface.Node.  The AVDevice class defines
+     a Listener class that can be inherited by the new class to listen for events from the device client communication
+     instances.
+  3. Add config parameter parsing to NodeFactory.get_params().
+  4. Update NodeFactory.on_ssdp_response() to build the new node.
+  5. Update the node definitions, nls entries and editors as needed.
+ 
+The included Pioneer VSX-1021 and Sony Bravia devices are available as examples
 
 ### Known Issues
 - [ ] The device status doesn't update when the nodeserver stops.  This is because the PolyGlot Interface disconnects
       the MQTT connection prior to calling the nodes stop method which breaks the ability of a node to update any
       ISY related information when it is being stopped.  PolyGlot does know how to modify the controller status and does
-      so automatically.
+      so automatically.  Subclassing the PolyGlot Interface and overriding the stop() method to call the stop
+      observers prior to shutting down MQTT would be a solution, but could break things when the PolyGlot interface
+      gets updated.
+- [ ] It's possible, but rare, that a response from a device may get lost if the connection between the nodeserver
+      and device gets broken.  The nodeserver attempts to reconnect, but the response to a command that is issued
+      just prior to discovering the broken connection is lost.  More intelligent code to cache the command and retry
+      it could resolve this.  (Work in progress)

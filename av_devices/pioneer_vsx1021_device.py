@@ -84,8 +84,8 @@ class PioneerVSX1021Device(AvDevice):
             # thread shutdown
             if not socket_error:
                 self._send("?P")
-            if self._listenerThread.is_alive() and not socket_error:
-                self._listenerThread.join()
+                if self._listenerThread.is_alive():
+                    self._listenerThread.join()
             self._listenerThread = self.DEAD_THREAD
     
     def initialize_state(self):

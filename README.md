@@ -13,15 +13,167 @@ are listed below along with any required parameters needed to specify how to con
 to that device and will have different requirements.
    
 ### Supported Devices:
-  1. Pioneer VSX-1021 (possibly other VSX series, but use the VSX1021 custom parameter to define them) receiver
+  1. Pioneer VSX-1021 (possibly other VSX series, but use the VSX1021 custom parameter to define them) receiver.
+     
+     Should be detected via SSDP discovery.  If it isn't, use the custom config parameter method to set it up.
   
      Custom config parameters:
      
        * VSX1021xxxx = Host IP and port of receiver, i.e. 192.168.1.xx:23
        
-  2. Sony Bravia XBR-65X810C (possibly other Bravia series, but use the BRAVIA customer parameter to define them) TV.  
-  Be sure to have Simple IP Control turned on in your network settings on the TV.
-       * BRAVIAxxxx = Host IP and port of receiver, i.e. 192.168.1.xx:20060
+     Supported Commands
+     
+      * Power
+      * Mute
+      * Volume
+      * Input
+        * PHONO
+        * CD
+        * TUNER
+        * CD-R/TAPE
+        * DVD
+        * TV/SAT
+        * VIDEO1
+        * MULTI CH IN
+        * VIDEO2
+        * DVR/BDR
+        * IPOD/USB
+        * XM RADIO
+        * HDMI1
+        * HDMI2
+        * HDMI3
+        * HDMI4
+        * HDMI5
+        * BD
+        * HOME MEDIA GALLERY
+        * SIRIUS
+        * HDMI CYCLE
+        * ADAPTER
+       
+  2. Sony Bravia XBR-65X810C (possibly other Bravia series, but use the BRAVIA custom parameter to define them) TV.  
+     Be sure to have Simple IP Control turned on in your network settings on the TV.
+     
+     Should be detected via SSDP discovery.  If it isn't, use the custom config parameter method to set it up.
+  
+    Custom config parameters:
+
+      * BRAVIAxxxx = Host IP and port of receiver, i.e. 192.168.1.xx:20060
+
+    Supported Commands
+     
+      * Power
+      * Mute
+      * Volume
+      * Input
+        * TV
+        * HDMI1
+        * HDMI2
+        * HDMI3
+        * HDMI4
+        * Composite
+        * Component
+        * Screen Mirror
+        * NetFlix (This is a pseudo input.  It's really an IRCC command but I use it so much I handle it like
+          a normal input)
+      * IRCC Commands: Some of these didn't work, but are listed in the Sony Simple IP control docs.
+        * POWER_OFF
+        * INPUT
+        * GGUIDE
+        * EPG
+        * FAVORITES
+        * DISPLAY
+        * HOME
+        * OPTIONS
+        * RETURN
+        * UP
+        * DOWN
+        * RIGHT
+        * LEFT
+        * CONFIRM
+        * RED
+        * GREEN
+        * YELLOW
+        * BLUE
+        * NUM1
+        * NUM2
+        * NUM3
+        * NUM4
+        * NUM5
+        * NUM6
+        * NUM7
+        * NUM8
+        * NUM9
+        * NUM0
+        * NUM11
+        * NUM12
+        * VOLUME_UP
+        * VOLUME_DOWN
+        * MUTE
+        * CHANNEL_UP
+        * CHANNEL_DOWN
+        * SUBTITLE
+        * CLOSED_CAPTION
+        * ENTER
+        * DOT
+        * ANALOG
+        * TELETEXT
+        * EXIT
+        * ANALOG2
+        * AD
+        * DIGITAL
+        * ANALOG_
+        * BS
+        * CS
+        * BS_CS
+        * DDATA
+        * PIC_OFF
+        * TV_RADIO
+        * THEATER
+        * SEN
+        * INTERNET_WIDGETS
+        * INTERNET_VIDEO
+        * NETFLIX
+        * SCENE_SELECT
+        * MODE3D
+        * IMANUAL
+        * AUDIO
+        * WIDE
+        * JUMP
+        * PAP
+        * MYEPG
+        * PROGRAM_DESCRIPTION
+        * WRITE_CHAPTER
+        * TRACK_ID
+        * TEN_KEY
+        * APPLICAST
+        * AC_TVILA
+        * DELETE_VIDEO
+        * PHOTO_FRAME
+        * TV_PAUSE
+        * KEYPAD
+        * MEDIA
+        * SYNC_MENU
+        * FORWARD
+        * PLAY
+        * REWIND
+        * PREV
+        * STOP
+        * NEXT
+        * REC
+        * PAUSE
+        * EJECT
+        * FLASH_PLUS
+        * FLASH_MINUS
+        * TOP_MENU
+        * POPUP_MENU
+        * RAKURAKU_START
+        * ONE_TOUCH_TIME_RECORD
+        * ONE_TOUCH_VIEW
+        * ONE_TOUCH_RECORD
+        * ONE_TOUCH_STOP
+        * DUX
+        * FOOTBALL_MODE
+        * SOCIAL
 
 SSDP will search the network for your devices (the devices should be on.  If they are off, then they might be missed).
 If SSDP doesn't find your devices, then you can define custom parameters for it as indicated.  If defining custom
@@ -61,13 +213,20 @@ new devices is fairly easy.  To add support for a new device:
 The included Pioneer VSX-1021 and Sony Bravia devices are available as examples
 
 ### Known Issues
-- [ ] The device status doesn't update when the nodeserver stops.  This is because the PolyGlot Interface disconnects
-      the MQTT connection prior to calling the nodes stop method which breaks the ability of a node to update any
-      ISY related information when it is being stopped.  PolyGlot does know how to modify the controller status and does
-      so automatically.  Subclassing the PolyGlot Interface and overriding the stop() method to call the stop
-      observers prior to shutting down MQTT would be a solution, but could break things when the PolyGlot interface
-      gets updated.
-- [ ] It's possible, but rare, that a response from a device may get lost if the connection between the nodeserver
-      and device gets broken.  The nodeserver attempts to reconnect, but the response to a command that is issued
-      just prior to discovering the broken connection is lost.  More intelligent code to cache the command and retry
-      it could resolve this.  (Work in progress)
+- I'm not sure if remote control pairing is needed on the Sony Bravia.  Prior to writing this node server, I
+  created some network resources that used the /sony/IRCC URI to control it.  At that time, I paired my TV to
+  get it to work using the SOAP protocol required by that URI.
+- Some states of the Bravia TV don't get sent as a notification over the Simple IP Control channel.  Therefore,
+  They won't update anything in the ISY.  The NetFlix status is updated as a pseudo input because I use it so
+  much, but if NetFlix is selected on the TV remote, ISY will not know that.  Generally, any app that is launched
+  does not issue a notification via the Simple IP Control channel.
+- The device status doesn't update when the nodeserver stops.  This is because the PolyGlot Interface disconnects
+  the MQTT connection prior to calling the nodes stop method which breaks the ability of a node to update any
+  ISY related information when it is being stopped.  PolyGlot does know how to modify the controller status and does
+  so automatically.  Subclassing the PolyGlot Interface and overriding the stop() method to call the stop
+  observers prior to shutting down MQTT would be a solution, but could break things when the PolyGlot interface
+  gets updated.
+- It's possible, but rare, that a response from a device may get lost if the connection between the nodeserver
+  and device gets broken.  The nodeserver attempts to reconnect, but the response to a command that is issued
+  just prior to discovering the broken connection is lost.  More intelligent code to cache the command and retry
+  it could resolve this.  (Work in progress)

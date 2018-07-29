@@ -22,7 +22,7 @@ class PioneerVSX1021Node(AVNode, AvDevice.Listener):
     def start(self):
         self.client.start()
         self.client.wait_for_startup()
-        self.setDriver("GV1", 1)
+        self.setDriver(self.Drivers.DEVICE_TYPE, 1)
         self.reportDrivers()
 
     def stop(self):
@@ -49,34 +49,32 @@ class PioneerVSX1021Node(AVNode, AvDevice.Listener):
         self.client.set_input(val)
 
     def on_connected(self):
-        self.setDriver("ST", 1)
+        self.setDriver(self.Drivers.STATUS, 1)
 
     def on_disconnected(self):
-        self.setDriver("ST", 0)
+        self.setDriver(self.Drivers.STATUS, 0)
 
     def on_power(self, power_state):
         self.l_debug("on_power", "{}".format("True" if power_state else "False"))
-        self.setDriver("GV2", 1 if power_state else 0)
+        self.setDriver(self.Drivers.POWER, 1 if power_state else 0)
 
     def on_volume(self, volume):
         self.l_debug("on_volume", "{}".format(volume))
-        self.setDriver("SVOL", self.client.volume)
+        self.setDriver(self.Drivers.VOLUME, self.client.volume)
 
     def on_mute(self, mute_state):
         self.l_debug("on_mute", "{}".format("True" if mute_state else "False"))
-        self.setDriver("GV3", 1 if mute_state else 0)
+        self.setDriver(self.Drivers.MUTE, 1 if mute_state else 0)
 
     def on_input(self, input_value):
         self.l_debug("on_input", "{}".format(PioneerVSX1021Device.INVERTED_INPUTS[input_value]))
-        self.setDriver("GV4", "{:0.1f}".format(float(input_value)))
+        self.setDriver(self.Drivers.INPUT, "{:0.1f}".format(float(input_value)))
 
     def on_responding(self):
-        self.setDriver("ST", 1)
-        # self.reportDrivers()
+        self.setDriver(self.Drivers.STATUS, 1)
 
     def on_not_responding(self):
-        self.setDriver("ST", 0)
-        # self.reportDrivers()
+        self.setDriver(self.Drivers.STATUS, 0)
 
     """
     Command Functions
@@ -101,6 +99,12 @@ class PioneerVSX1021Node(AVNode, AvDevice.Listener):
         self.l_info("cmd_set_input", val)
         if val != PioneerVSX1021Device.INPUTS["UNKNOWN"]:
             self.set_input(val)
+
+    def setDriver(self, driver, value, report=True, force=False, uom=None):
+        if isinstance(driver, str):
+            super().setDriver(driver, value, report, force, uom)
+        elif isinstance(driver, self.Drivers):
+            super().setDriver(driver.value, value, report, force, uom)
 
     def l_info(self, name, string):
         LOGGER.info("%s:%s: %s" % (self.id, name, string))

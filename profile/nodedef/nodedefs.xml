@@ -23,7 +23,6 @@
                     <p id="" editor="I_DM" init="GV6"/>
                 </cmd>
                 <cmd id="DISCOVER"/>
-                <cmd id="REMOVE_NOTICES_ALL"/>
                 <cmd id="UPDATE_PROFILE"/>
             </accepts>
         </cmds>
@@ -132,6 +131,11 @@
                 <cmd id="SET_IRCC">
                     <p id="" editor="I_BRAVIA_IRCC" init="GV5"/>
                 </cmd>
+                <cmd id="PLAY"/>
+                <cmd id="PAUSE"/>
+                <cmd id="STOP"/>
+                <cmd id="REWIND"/>
+                <cmd id="FAST_FORWARD"/>
                 <cmd id="QUERY"/>
             </accepts>
         </cmds>

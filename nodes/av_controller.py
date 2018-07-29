@@ -84,8 +84,7 @@ class AVController(polyinterface.Controller, NodeFactory.SsdpListener):
 
         self.setDriver("GV1", self.serverData["version_major"])
         self.setDriver("GV2", self.serverData["version_minor"])
-        self.setDriver("GV6", self.debug_mode)
-
+        self.set_debug_mode(self.getCustomParam("debugMode"))
         self.setDriver("ST", 1)
         self.reportDrivers()
 
@@ -200,11 +199,6 @@ class AVController(polyinterface.Controller, NodeFactory.SsdpListener):
         self._nodeFactory.shutdown_ssdp_listener()
 
         LOGGER.debug("A/V NodeServer stopped.")
-
-    def remove_notices_all(self, command):
-        LOGGER.info("remove_notices_all:")
-        # Remove all existing notices
-        self.removeNoticesAll()
 
     def cmd_install_profile(self, command):
         LOGGER.info("cmd_install_profile:")
@@ -365,8 +359,7 @@ class AVController(polyinterface.Controller, NodeFactory.SsdpListener):
     commands = {
         "SET_DM": cmd_set_debug_mode,
         "DISCOVER": discover,
-        "UPDATE_PROFILE": cmd_install_profile,
-        "REMOVE_NOTICES_ALL": remove_notices_all
+        "UPDATE_PROFILE": cmd_install_profile
     }
     drivers = [
         {"driver": "ST", "value": 0, "uom": 2},

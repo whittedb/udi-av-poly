@@ -289,12 +289,6 @@ class CommData(object):
             self.function = Functions.INPUT.value
             return self
 
-    def goto_netflix(self):
-        with self._lock:
-            self.function = Functions.IRCC_CODE.value
-            self.parameter = IrccCommands.NETFLIX.code
-            return self
-
     def do_ircc(self, code):
         with self._lock:
             self.function = Functions.IRCC_CODE.value
@@ -480,7 +474,10 @@ class SonyBraviaXBR65X810CDevice(AvDevice, ClientHandler.Listener):
 
     "Send IRCC request"""
     def do_ircc(self, code, pause=0):
-        self._send(CommData(pause=pause).do_ircc(code))
+        if isinstance(code, IrccCommands):
+            self._send(CommData(pause=pause).do_ircc(code.value))
+        else:
+            self._send(CommData(pause=pause).do_ircc(code))
 
     def query_power(self, pause=0):
         self._send(CommData(Type.ENQUIRY, pause=pause).get_power())

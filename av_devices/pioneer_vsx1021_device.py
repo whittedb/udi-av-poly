@@ -84,7 +84,7 @@ class PioneerVSX1021Device(AvDevice):
             # thread shutdown
             if not socket_error:
                 self._send("?P")
-            if self._listenerThread.is_alive():
+            if self._listenerThread.is_alive() and not socket_error:
                 self._listenerThread.join()
             self._listenerThread = self.DEAD_THREAD
     
@@ -142,7 +142,8 @@ class PioneerVSX1021Device(AvDevice):
                 self._update_states(data)
             except (ConnectionResetError, socket.error, socket.gaierror, EOFError) as e:
                 self.logger.debug("VSX1021: Socket error on read, {}".format(e))
-                self.handle_error(error=e)
+                self.handle_error(error=self.NotResponding())
+                break
 
         self.logger.debug("VSX1021 listener thread exiting")
 

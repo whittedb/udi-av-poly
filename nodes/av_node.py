@@ -3,6 +3,7 @@ This is a NodeServer for the Pioneer VSX-1021 A/V Receiver for Polyglot v2 writt
 by Brad Whitted brad_whitted@gmail.com
 """
 import polyinterface
+from enum import Enum, unique
 
 LOGGER = polyinterface.LOGGER
 
@@ -27,6 +28,14 @@ class AVNode(polyinterface.Node):
         query(): Called when ISY sends a query request to Polyglot for this specific node
     """
 
+    class Drivers(Enum):
+        STATUS = "ST"
+        DEVICE_TYPE = "GV1"     # Device Type
+        POWER = "GV2"           # Power
+        MUTE = "GV3"            # Mute
+        VOLUME = "SVOL"         # Volume
+        INPUT = "GV4"           # Input Source
+        
     TYPE = "GENERIC"
 
     def __init__(self, controller, primary, address=None, name=None):
@@ -75,10 +84,10 @@ class AVNode(polyinterface.Node):
         "QUERY": query
     }
     drivers = [
-        {"driver": "ST", "value": 0, "uom": 2},
-        {"driver": "GV1", "value": 0, "uom": 25},   # Device Type
-        {"driver": "GV2", "value": 0, "uom": 25},   # Power
-        {"driver": "GV3", "value": 0, "uom": 25},   # Mute
-        {"driver": "SVOL", "value": -80, "uom": 56},  # Volume
-        {"driver": "GV4", "value": 999, "uom": 25}  # Input Source
+        {"driver": Drivers.STATUS.value, "value": 0, "uom": 2},
+        {"driver": Drivers.DEVICE_TYPE.value, "value": 0, "uom": 25},
+        {"driver": Drivers.POWER.value, "value": 0, "uom": 25},
+        {"driver": Drivers.MUTE.value, "value": 0, "uom": 25},
+        {"driver": Drivers.VOLUME.value, "value": 0, "uom": 56},
+        {"driver": Drivers.INPUT.value, "value": 999, "uom": 25}
     ]

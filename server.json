@@ -1,5 +1,5 @@
 {
-    "name": "A/VServer",
+    "name": "AVServer",
     "docs": "",
     "type": "python3",
     "executable": "udi-av-poly.py",

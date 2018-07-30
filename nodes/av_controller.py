@@ -78,7 +78,7 @@ class AVController(polyinterface.Controller, NodeFactory.SsdpListener):
         this is where you should start. No need to Super this method, the parent
         version does nothing.
         """
-        self.l_info("init", "Starting A/V NodeServer version %s" % str(self.serverData["version"]))
+        self.l_info("start", "Starting A/V NodeServer version %s" % str(self.serverData["version"]))
         self._nodeFactory.start_ssdp_listener()
         self.check_profile()
 

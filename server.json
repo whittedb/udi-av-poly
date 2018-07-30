@@ -4,7 +4,7 @@
     "type": "python3",
     "executable": "udi-av-poly.py",
     "install": "install.sh",
-    "description": "Generic A/V Node Server",
+    "description": "Generic A/V Node Server. Supports Pioneer VSX-1021, Sony Bravia XBR-65X810C",
     "notice": "No disclaimer here",
     "shortPoll": "10",
     "longPoll": "60",
@@ -12,7 +12,7 @@
         {
             "title": "udi-av-poly: a generic A/V device NodeServer",
             "author": "Brad Whitted (whittedb)",
-            "version": "2.0.0",
+            "version": "2.0.1",
             "date": "June 28, 2018",
             "source": "https://github.com/whittedb/udi-av-poly.git",
             "license": ""

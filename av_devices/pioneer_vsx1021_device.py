@@ -73,6 +73,7 @@ class PioneerVSX1021Device(AvDevice):
     def start_listener_thread(self):
         if self._listenerThread == self.DEAD_THREAD:
             self._listenerThread = Thread(name="Pioneer VSX1021 Receiver", target=self._input_listener)
+            self._listenerThread.daemon = True
             self._listenerThread.start()
 
     def stop_listener_thread(self, socket_error=False):
@@ -85,18 +86,17 @@ class PioneerVSX1021Device(AvDevice):
             if not socket_error:
                 self._send("?P")
                 if self._listenerThread.is_alive():
+                    self.logger.debug("VSX1021: Waiting for listener thread to die")
                     self._listenerThread.join()
             self._listenerThread = self.DEAD_THREAD
-    
+        self.logger.debug("VSX1021: Listener thread stopped")
+
     def initialize_state(self):
         self.query()
         sleep(1)
 
     "Sends single command to AV"""
     def _send(self, cmd):
-        if not self.is_running():
-            return
-
         command = cmd + '\r'
 
         # self._tn.read_eager()  # Cleanup any pending output.

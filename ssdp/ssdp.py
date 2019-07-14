@@ -28,8 +28,10 @@ class SSDPResponse(object):
         self.usn = r.getheader("usn")
         self.st = r.getheader("st")
         self.cache = r.getheader("cache-control").split("=")[1]
-        self.host = self.location.split("//")[1].split(":")[0]
-        self.port = self.location.split("//")[1].split(":")[1].split("/")[0]
+#        LOGGER.debug("Location: {}".format(self.location))
+        if "//" in self.location:
+            self.host = self.location.split("//")[1].split(":")[0]
+            self.port = self.location.split("//")[1].split(":")[1].split("/")[0]
 
     def __repr__(self):
         return "<SSDPResponse({location}, {st}, {usn}, {manufacturer}, {model})>".format(**self.__dict__)
@@ -174,8 +176,10 @@ class SSDP(object):
                 elif self._sock in ready:
                     response = SSDPResponse(self._sock.recv(1024))
 
-                    # Some devices return no URL other than host:port.  These tend to not return any XML info
-                    # when the location is looked up, so we will ignore them
+                    # Some devices return no URL other than either host or host:port.  These tend to not return any
+                    #  XML info when the location is looked up, so we will ignore them.
+                    if "//" not in response.location:
+                        continue
                     sv = response.location.split("//")
                     if "/" not in sv[1]:
                         continue

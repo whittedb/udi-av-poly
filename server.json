@@ -4,7 +4,7 @@
     "type": "python3",
     "executable": "udi-av-poly.py",
     "install": "install.sh",
-    "description": "Generic A/V Node Server. Supports Pioneer VSX-1021, Sony Bravia XBR-65X810C",
+    "description": "Generic A/V Node Server that supports unsolicted status responses from the devices. Currently supports Pioneer VSX-1021, Sony Bravia XBR-65X810C.",
     "notice": "No disclaimer here",
     "shortPoll": "10",
     "longPoll": "60",

@@ -28,10 +28,13 @@ class SSDPResponse(object):
         self.usn = r.getheader("usn")
         self.st = r.getheader("st")
         self.cache = r.getheader("cache-control").split("=")[1]
-#        LOGGER.debug("Location: {}".format(self.location))
+        self.port = 80
+        LOGGER.info("Location: {}".format(self.location))
         if "//" in self.location:
-            self.host = self.location.split("//")[1].split(":")[0]
-            self.port = self.location.split("//")[1].split(":")[1].split("/")[0]
+            splits = self.location.split("//")
+            self.host = splits[1].split(":")[0]
+            if ":" in splits[1]:
+                self.port = splits[1].split(":")[1].split("/")[0]
 
     def __repr__(self):
         return "<SSDPResponse({location}, {st}, {usn}, {manufacturer}, {model})>".format(**self.__dict__)

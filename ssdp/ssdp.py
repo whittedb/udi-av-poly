@@ -151,12 +151,16 @@ class SSDP(object):
                 break
 
             location = response.location
-            r = requests.get(location)
-            if r.status_code == 200:
-                response.add_info(xmltodict.parse(r.text))
-                for l in self._listeners:
-                    l.on_ssdp_response(response)
-                    self._responseQueue.task_done()
+            try:
+                r = requests.get(location)
+                if r.status_code == 200:
+                    response.add_info(xmltodict.parse(r.text))
+                    for l in self._listeners:
+                        l.on_ssdp_response(response)
+                        self._responseQueue.task_done()
+            except ConnectionError as e:
+                LOGGER.error("Failed to retrieve web service information for {}".format(location))
+                LOGGER.error(e)
 
         LOGGER.info("Ending SSDP response handler")
 

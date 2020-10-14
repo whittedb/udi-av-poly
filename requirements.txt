@@ -1,4 +1,14 @@
-requests==2.20.0
-polyinterface>=2.0.0
+-i https://pypi.org/simple
+certifi==2020.6.20
+chardet==3.0.4
+idna==2.7
+markdown2==2.3.9
+netifaces==0.10.9
+paho-mqtt==1.5.1
+polyinterface==2.1.0
+python-dotenv==0.14.0
+requests==2.20
+six==1.15.0
 transitions==0.6.8
+urllib3==1.24.3
 xmltodict==0.11.0

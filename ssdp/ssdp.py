@@ -158,7 +158,7 @@ class SSDP(object):
                     for l in self._listeners:
                         l.on_ssdp_response(response)
                         self._responseQueue.task_done()
-            except ConnectionError as e:
+            except requests.ConnectionError as e:
                 LOGGER.error("Failed to retrieve web service information for {}".format(location))
                 LOGGER.error(e)
 

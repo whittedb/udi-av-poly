@@ -8,7 +8,8 @@ LOGGER = polyinterface.LOGGER
 
 
 SUPPORTED_DEVICES = [
-    "VSX1021"
+    "VSX1021",
+    "BRAVIA"
 ]
 
 

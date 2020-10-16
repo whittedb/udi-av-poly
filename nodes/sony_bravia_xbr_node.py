@@ -1,13 +1,13 @@
 import polyinterface
 from .av_node import AVNode
 from av_devices.av_device import AvDevice
-from av_devices import SonyBraviaXBR65X810CDevice
-from av_devices.sony_bravia_xbr_65x810c_device import IrccCommands
+from av_devices import SonyBraviaXBRDevice
+from av_devices.sony_bravia_xbr_device import IrccCommands
 
 LOGGER = polyinterface.LOGGER
 
 
-class SonyBraviaXBR65X810CNode(AVNode, AvDevice.Listener):
+class SonyBraviaXBRNode(AVNode, AvDevice.Listener):
     TYPE = "BRAVIA"
 
     def __init__(self, controller, primary, host, port, address=None, name=None):
@@ -16,7 +16,7 @@ class SonyBraviaXBR65X810CNode(AVNode, AvDevice.Listener):
         self.commands.update(self.bravia_commands)
         self.drivers.extend(self.bravia_drivers)
         super().__init__(controller, primary, address, name)
-        self.client = SonyBraviaXBR65X810CDevice(self.TYPE + ":" + name, self.host, self.port, logger=LOGGER)
+        self.client = SonyBraviaXBRDevice(self.TYPE + ":" + name, self.host, self.port, logger=LOGGER)
         self.client.add_listener(self)
 
     def start(self):
@@ -53,10 +53,10 @@ class SonyBraviaXBR65X810CNode(AVNode, AvDevice.Listener):
     def set_input(self, val):
         try:
             self.l_debug("set_input", "CMD Source: {}".format(
-                    SonyBraviaXBR65X810CDevice.INVERTED_INPUTS[str(val).zfill(2)]))
+                    SonyBraviaXBRDevice.INVERTED_INPUTS[str(val).zfill(2)]))
         except KeyError:
             pass
-        if val != SonyBraviaXBR65X810CDevice.INPUTS["UNKNOWN"]:
+        if val != SonyBraviaXBRDevice.INPUTS["UNKNOWN"]:
             self.client.set_input(val)
 
     def do_ircc(self, val):
@@ -85,7 +85,7 @@ class SonyBraviaXBR65X810CNode(AVNode, AvDevice.Listener):
         v = int(val)
         self.l_debug("on_input", "Val: {}".format(v))
         try:
-            self.l_debug("on_input", "{}".format(SonyBraviaXBR65X810CDevice.INVERTED_INPUTS[v]))
+            self.l_debug("on_input", "{}".format(SonyBraviaXBRDevice.INVERTED_INPUTS[v]))
         except KeyError:
             self.l_warning("on_input", "Unknown input: {}".format(v))
         self.setDriver(self.Drivers.INPUT, v)

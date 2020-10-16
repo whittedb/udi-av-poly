@@ -157,10 +157,11 @@ class SSDP(object):
                     response.add_info(xmltodict.parse(r.text))
                     for l in self._listeners:
                         l.on_ssdp_response(response)
-                        self._responseQueue.task_done()
             except requests.ConnectionError as e:
                 LOGGER.error("Failed to retrieve web service information for {}".format(location))
                 LOGGER.error(e)
+
+            self._responseQueue.task_done()
 
         LOGGER.info("Ending SSDP response handler")
 

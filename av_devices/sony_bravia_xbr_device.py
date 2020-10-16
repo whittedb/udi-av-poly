@@ -415,7 +415,7 @@ class ClientHandler(asyncore.dispatcher):
         self._sendQ.put(qdata)
 
 
-class SonyBraviaXBR65X810CDevice(AvDevice, ClientHandler.Listener):
+class SonyBraviaXBRDevice(AvDevice, ClientHandler.Listener):
     INPUTS = {name: member.value for name, member in Inputs.__members__.items()}
     INVERTED_INPUTS = {member.value: name for name, member in Inputs.__members__.items()}
     DEAD_THREAD = Thread()

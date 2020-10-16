@@ -2,7 +2,7 @@ import polyinterface
 from copy import deepcopy
 from ssdp.ssdp import SSDP
 from .pioneer_vsx1021_node import PioneerVSX1021Node
-from .sony_bravia_xbr_65x810c_node import SonyBraviaXBR65X810CNode
+from .sony_bravia_xbr_node import SonyBraviaXBRNode
 
 LOGGER = polyinterface.LOGGER
 
@@ -54,9 +54,9 @@ class NodeFactory(SSDP.Listener):
         if device_type == PioneerVSX1021Node.TYPE:
             return PioneerVSX1021Node(controller=self._controller, primary=self._primary,
                                       address=address, host=host, port=port, name=name)
-        if device_type == SonyBraviaXBR65X810CNode.TYPE:
-            return SonyBraviaXBR65X810CNode(controller=self._controller, primary=self._primary,
-                                            address=address, host=host, port=port, name=name)
+        if device_type == SonyBraviaXBRNode.TYPE:
+            return SonyBraviaXBRNode(controller=self._controller, primary=self._primary,
+                                     address=address, host=host, port=port, name=name)
 
         return None
 
@@ -67,8 +67,8 @@ class NodeFactory(SSDP.Listener):
             device_type = PioneerVSX1021Node.TYPE
             ssdp_response.port = 23
             ssdp_response.model = device_type
-        if ssdp_response.manufacturer == "Sony Corporation" and "XBR-65X810C" in ssdp_response.model:
-            device_type = SonyBraviaXBR65X810CNode.TYPE
+        if ssdp_response.manufacturer == "Sony Corporation" and "XBR-" in ssdp_response.model:
+            device_type = SonyBraviaXBRNode.TYPE
             ssdp_response.port = 20060
             ssdp_response.model = device_type
 
